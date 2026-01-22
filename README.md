@@ -1,37 +1,36 @@
-# Pro Media Cropper
+# Pro Media Cropper v3.4
 
-A powerful, browser-side image processing plugin for WordPress. Effortlessly convert various file formats into perfect 1920x1080 JPGs for use in sliders, headers, and social media.
+A professional-grade WordPress plugin for converting any media asset—including **PDFs, SVGs, and WebP**—into perfect 1920x1080 (16:9) images.
 
-## 🚀 Features
+## 🚀 Key Features in v3.4
 
-- **Wide Format Support:** Works with PDF (first page), SVG, WebP, BMP, PNG, and JPG.
-- **Client-Side Processing:** All image manipulation happens in the user's browser. This saves server memory and allows for lightning-fast cropping.
-- **Echo Pillarbox Mode:** Intelligent blurring background for vertical or oddly shaped images to fit 16:9 without stretching.
-- **Double Save Options:** Save processed images directly to your WordPress Media Library or download them to your local computer.
-- **Zero Configuration:** Works out of the box with standard WordPress permissions (Admin, Editor, Author).
+* **Smart Crop Modes:**
+    * **Locked 16:9:** Forces the crop tool to maintain an HD aspect ratio.
+    * **Pillarbox:** Allows free-form cropping. The plugin automatically fills the empty space to ensure the final output remains 16:9.
+* **Contextual UI:** Pillarbox controls (Blur, Color, Eyedropper) automatically hide when in Locked mode to keep your workspace clean.
+* **PDF to Image Engine:** Renders the first page of any PDF document into a high-resolution image locally in your browser.
+* **Pro Pillarbox Styles:**
+    * **Echo Blur:** Creates a cinematic blurred background from your image.
+    * **Solid Colors:** Choose Black, White, or use the Eyedropper for a custom brand color.
+* **Dual Saving:** Save directly to the WordPress Media Library or download locally as a high-quality JPG.
+
+---
 
 ## 🛠 Installation
 
-1. **Download** the repository as a `.zip` file.
-2. **Login** to your WordPress Admin dashboard.
-3. Navigate to **Plugins > Add New > Upload Plugin**.
-4. Choose the `pro-media-cropper.zip` and click **Install Now**.
-5. Click **Activate Plugin**.
+1. Upload the `pro-media-cropper` folder to your `/wp-content/plugins/` directory.
+2. Activate the plugin through the **Plugins** menu in WordPress.
+3. Navigate to **Media > Pro Cropper** to begin.
 
-## 📖 How to Use
+---
 
-1. Go to the WordPress sidebar and click **Media > Pro Cropper**.
-2. Upload your source file (Image or PDF).
-3. Adjust the crop area.
-4. (Optional) Switch to **Echo Blur** mode and adjust the blur slider if your image doesn't naturally fill a 16:9 frame.
-5. Click **Save to Media Library** to store it on your site, or **Download JPG** for local use.
+## 🎨 How to use the "Crop Mode" Toggle
 
-## ⚙️ Requirements
+1. **Select Locked 16:9** if your source image is already horizontal and you just want to frame it perfectly.
+2. **Select Pillarbox** if you have a vertical or square image (like a PDF document or a portrait photo). Use the **Pillarbox Style** dropdown to choose how you want to fill the "empty" sides of the 1080p frame.
+3. Use the **Reset Crop** button next to the file selector if you need to snap the crop box back to its starting position without reloading the file.
 
-- WordPress 5.0+
-- A modern web browser (Chrome, Firefox, Safari, or Edge)
-- No server-side libraries (GD/ImageMagick) required!
+---
 
 ## 📜 License
-
-Distributed under the MIT License.
+MIT - Developed for high-performance client-side image processing.
