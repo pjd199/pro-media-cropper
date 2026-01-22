@@ -1,21 +1,19 @@
 <?php
 /**
  * Plugin Name: Pro Media Cropper
- * Description: Crop PDF, SVG, BMP, WebP, PNG, JPG to 16:9. Save to WordPress Media Library or Download to Computer.
- * Version: 1.4
+ * Description: Upload an image and crop to a 1920x1080 featured image
+ * Version: 3.4
  * Author: Gemini Developer
  */
 
 if (!defined('ABSPATH')) exit;
 
-add_action('admin_menu', 'pmc_register_menu');
-function pmc_register_menu() {
+add_action('admin_menu', function() {
     add_media_page('Pro Cropper', 'Pro Cropper', 'publish_posts', 'pro-media-cropper', 'pmc_render_page');
-}
+});
 
 add_action('admin_enqueue_scripts', function($hook) {
     if ($hook !== 'media_page_pro-media-cropper') return;
-
     wp_enqueue_style('cropper-css', 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css');
     wp_enqueue_script('cropper-js', 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js', array(), null, true);
     wp_enqueue_script('pdf-js', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', array(), null, true);
@@ -39,55 +37,71 @@ function pmc_render_page() {
         .pmc-row { margin-bottom: 15px; }
         .pmc-row label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 11px; text-transform: uppercase; color: #64748b; }
         
-        .pmc-btn-group { display: flex; flex-direction: column; gap: 10px; }
-        .pmc-primary-btn { background: #2271b1; color: #fff; border: none; padding: 12px; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; }
-        .pmc-secondary-btn { background: #f6f7f7; color: #2271b1; border: 1px solid #2271b1; padding: 10px; border-radius: 4px; width: 100%; font-weight: 600; cursor: pointer; }
-        .pmc-primary-btn:disabled, .pmc-secondary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* Toggle Switch Styling */
+        .pmc-mode-toggle { display: flex; background: #f0f0f1; border-radius: 4px; padding: 4px; margin-bottom: 15px; border: 1px solid #ccd0d4; }
+        .pmc-mode-btn { flex: 1; border: none; padding: 8px; cursor: pointer; font-size: 12px; font-weight: 600; border-radius: 3px; background: transparent; color: #64748b; transition: all 0.2s; }
+        .pmc-mode-btn.active { background: #fff; color: #2271b1; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         
-        #pmc-loading { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
-        .spinner-ring { width: 30px; height: 30px; border: 3px solid #ddd; border-top: 3px solid #2271b1; border-radius: 50%; animation: pmc-spin 1s linear infinite; margin-bottom: 10px; }
-        @keyframes pmc-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .pmc-hidden { display: none; }
+        .pmc-btn-group { display: flex; flex-direction: column; gap: 10px; }
+        .pmc-primary-btn { background: #2271b1; color: #fff; border: none; padding: 12px; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; text-align: center; }
+        .pmc-secondary-btn { background: #f6f7f7; color: #2271b1; border: 1px solid #2271b1; padding: 10px; border-radius: 4px; width: 100%; font-weight: 600; cursor: pointer; }
+        #pmc-loading { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10; font-weight:600;}
+        
+        #pillarbox-controls { display: block; }
     </style>
 
     <div class="wrap">
-        <h1>Pro Media Cropper</h1>
+        <h1>Pro Media Cropper v3.4</h1>
         <div class="pmc-container">
             <div class="pmc-main">
                 <div class="pmc-editor-wrapper">
-                    <div id="pmc-loading">
-                        <div class="spinner-ring"></div>
-                        <div id="pmc-loading-text">Initializing...</div>
-                    </div>
+                    <div id="pmc-loading">Processing...</div>
                     <img id="pmc-image">
                 </div>
-                <input type="file" id="pmc-file-input" accept=".pdf,.svg,.jpg,.jpeg,.png,.webp,.bmp">
+                <div style="display:flex; gap:10px;">
+                    <input type="file" id="pmc-file-input" accept=".pdf,.svg,.jpg,.jpeg,.png,.webp,.bmp" style="flex:1;">
+                    <button id="pmc-reset-btn" class="pmc-secondary-btn" style="width:auto; padding: 0 20px; margin-top:0;">Reset Crop</button>
+                </div>
             </div>
-
             <div class="pmc-sidebar">
-                <label>Export Preview (1080p)</label>
-                <div class="pmc-preview-box">
-                    <canvas id="pmc-canvas"></canvas>
-                </div>
-
+                <label>Export Preview (1920x1080)</label>
+                <div class="pmc-preview-box"><canvas id="pmc-canvas"></canvas></div>
+                
                 <div class="pmc-row">
-                    <label>Pillarbox Mode</label>
-                    <select id="pmc-mode" style="width: 100%;">
-                        <option value="standard">Locked 16:9</option>
-                        <option value="echo" selected>Echo Blur (Freeform)</option>
-                    </select>
+                    <label>Crop Mode</label>
+                    <div class="pmc-mode-toggle">
+                        <button id="mode-locked" class="pmc-mode-btn">Locked 16:9</button>
+                        <button id="mode-pillar" class="pmc-mode-btn active">Pillarbox</button>
+                    </div>
                 </div>
 
-                <div id="pmc-blur-row" class="pmc-row">
-                    <label>Blur Intensity</label>
-                    <input type="range" id="pmc-blur" min="0" max="80" value="30" style="width: 100%;">
+                <div id="pillarbox-controls">
+                    <div class="pmc-row">
+                        <label>Pillarbox Style</label>
+                        <select id="pmc-mode" style="width: 100%;">
+                            <option value="echo" selected>Echo Blur</option>
+                            <option value="black">Solid Black</option>
+                            <option value="white">Solid White</option>
+                            <option value="custom">Custom Color</option>
+                        </select>
+                    </div>
+
+                    <div class="pmc-row" id="color-picker-wrap" style="display:none;">
+                        <label>Custom Color / Eyedropper</label>
+                        <input type="color" id="pmc-color" value="#2271b1" style="width: 100%; height: 40px; cursor: pointer;">
+                    </div>
+
+                    <div class="pmc-row" id="blur-wrap">
+                        <label>Blur Intensity</label>
+                        <input type="range" id="pmc-blur" min="0" max="80" value="30" style="width: 100%;">
+                    </div>
                 </div>
 
                 <div class="pmc-btn-group">
                     <button id="pmc-save-btn" class="pmc-primary-btn" disabled>Save to Media Library</button>
-                    <button id="pmc-dl-btn" class="pmc-secondary-btn" disabled>Download to Computer</button>
+                    <button id="pmc-dl-btn" class="pmc-secondary-btn" disabled>Download JPG</button>
                 </div>
-                <div id="pmc-status" style="margin-top:15px; font-size: 12px; line-height: 1.4;"></div>
+                <div id="pmc-status" style="margin-top:15px; font-size: 12px;"></div>
             </div>
         </div>
     </div>
@@ -100,13 +114,17 @@ function pmc_render_page() {
         const ctx = canvas.getContext('2d');
         const saveBtn = document.getElementById('pmc-save-btn');
         const dlBtn = document.getElementById('pmc-dl-btn');
+        const resetBtn = document.getElementById('pmc-reset-btn');
         const loader = document.getElementById('pmc-loading');
         const modeSelect = document.getElementById('pmc-mode');
+        const colorPicker = document.getElementById('pmc-color');
         const blurRange = document.getElementById('pmc-blur');
+        const btnLocked = document.getElementById('mode-locked');
+        const btnPillar = document.getElementById('mode-pillar');
+        const pillarControls = document.getElementById('pillarbox-controls');
         const status = document.getElementById('pmc-status');
 
-        let cropper = null;
-        let originalName = 'image';
+        let cropper = null, originalName = 'image', isLocked = false;
         const W = 1920, H = 1080;
         canvas.width = W; canvas.height = H;
 
@@ -114,13 +132,22 @@ function pmc_render_page() {
             return new Promise((resolve) => {
                 const check = () => {
                     const lib = window['pdfjs-dist/build/pdf'];
-                    if (lib) {
-                        lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                        resolve(lib);
-                    } else { setTimeout(check, 100); }
+                    if (lib) { lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; resolve(lib); }
+                    else { setTimeout(check, 100); }
                 };
                 check();
             });
+        }
+
+        async function renderPdf(file) {
+            const pdfjsLib = await getPdfLib();
+            const pdf = await pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
+            const page = await pdf.getPage(1);
+            const vp = page.getViewport({scale: 2.5});
+            const c = document.createElement('canvas');
+            c.height = vp.height; c.width = vp.width;
+            await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise;
+            return c.toDataURL('image/png');
         }
 
         fileInput.onchange = async (e) => {
@@ -128,47 +155,18 @@ function pmc_render_page() {
             if (!file) return;
             loader.style.display = 'flex';
             originalName = file.name.split('.')[0];
-
             try {
-                let sourceUrl;
-                if (file.type === 'application/pdf') {
-                    const pdfjsLib = await getPdfLib();
-                    sourceUrl = await renderPdfToDataUrl(file, pdfjsLib);
-                } else {
-                    sourceUrl = URL.createObjectURL(file);
-                }
-
+                let url = (file.type === 'application/pdf') ? await renderPdf(file) : URL.createObjectURL(file);
                 if (cropper) cropper.destroy();
-                img.src = sourceUrl;
-                img.onload = () => {
-                    initCropper();
-                    saveBtn.disabled = false;
-                    dlBtn.disabled = false;
-                    loader.style.display = 'none';
-                };
-            } catch (err) {
-                alert("Error: " + err.message);
-                loader.style.display = 'none';
-            }
+                img.src = url;
+                img.onload = () => { initCropper(); saveBtn.disabled = dlBtn.disabled = false; loader.style.display = 'none'; };
+            } catch (err) { alert(err.message); loader.style.display = 'none'; }
         };
-
-        async function renderPdfToDataUrl(file, pdfjsLib) {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-            const page = await pdf.getPage(1);
-            const viewport = page.getViewport({scale: 2.0});
-            const tempCanvas = document.createElement('canvas');
-            const tCtx = tempCanvas.getContext('2d');
-            tempCanvas.height = viewport.height;
-            tempCanvas.width = viewport.width;
-            await page.render({canvasContext: tCtx, viewport: viewport}).promise;
-            return tempCanvas.toDataURL('image/png');
-        }
 
         function initCropper() {
             if (cropper) cropper.destroy();
             cropper = new Cropper(img, {
-                aspectRatio: modeSelect.value === 'echo' ? NaN : 16/9,
+                aspectRatio: isLocked ? 16/9 : NaN,
                 viewMode: 1,
                 ready: update,
                 crop: update
@@ -181,57 +179,76 @@ function pmc_render_page() {
             if (!crop) return;
 
             ctx.clearRect(0, 0, W, H);
-            ctx.fillStyle = "#FFFFFF"; 
-            ctx.fillRect(0,0,W,H);
-
-            if (modeSelect.value === 'echo') {
-                ctx.save();
-                ctx.filter = `blur(${blurRange.value}px) brightness(0.6)`;
-                ctx.drawImage(crop, -150, -150, W + 300, H + 300);
-                ctx.restore();
-                const r = Math.min(W / crop.width, H / crop.height);
-                const nw = crop.width * r, nh = crop.height * r;
-                ctx.drawImage(crop, (W - nw)/2, (H - nh)/2, nw, nh);
+            
+            if (!isLocked) {
+                if (modeSelect.value === 'echo') {
+                    ctx.save();
+                    ctx.filter = `blur(${blurRange.value}px) brightness(0.6)`;
+                    ctx.drawImage(crop, -150, -150, W + 300, H + 300);
+                    ctx.restore();
+                } else if (modeSelect.value === 'black') {
+                    ctx.fillStyle = "#000000"; ctx.fillRect(0,0,W,H);
+                } else if (modeSelect.value === 'white') {
+                    ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0,0,W,H);
+                } else if (modeSelect.value === 'custom') {
+                    ctx.fillStyle = colorPicker.value; ctx.fillRect(0,0,W,H);
+                }
             } else {
-                ctx.drawImage(crop, 0, 0, W, H);
+                ctx.fillStyle = "#000000"; ctx.fillRect(0,0,W,H);
             }
+
+            const r = Math.min(W / crop.width, H / crop.height);
+            const nw = crop.width * r, nh = crop.height * r;
+            ctx.drawImage(crop, (W - nw)/2, (H - nh)/2, nw, nh);
         }
 
-        modeSelect.onchange = () => {
-            document.getElementById('pmc-blur-row').classList.toggle('pmc-hidden', modeSelect.value !== 'echo');
+        // Mode Switching Logic
+        btnLocked.onclick = () => {
+            isLocked = true;
+            btnLocked.classList.add('active');
+            btnPillar.classList.remove('active');
+            pillarControls.style.display = 'none';
             initCropper();
         };
-        blurRange.oninput = () => update();
 
-        // SAVE TO MEDIA LIBRARY
+        btnPillar.onclick = () => {
+            isLocked = false;
+            btnPillar.classList.add('active');
+            btnLocked.classList.remove('active');
+            pillarControls.style.display = 'block';
+            initCropper();
+        };
+
+        resetBtn.onclick = () => { if(cropper) initCropper(); };
+
+        modeSelect.onchange = () => {
+            document.getElementById('blur-wrap').style.display = (modeSelect.value === 'echo') ? 'block' : 'none';
+            document.getElementById('color-picker-wrap').style.display = (modeSelect.value === 'custom') ? 'block' : 'none';
+            update();
+        };
+        
+        blurRange.oninput = update;
+        colorPicker.oninput = update;
+
         saveBtn.onclick = () => {
-            saveBtn.disabled = true;
-            status.textContent = "Uploading to WordPress...";
+            saveBtn.disabled = true; status.textContent = "Saving...";
             canvas.toBlob((blob) => {
-                const formData = new FormData();
-                formData.append('file', blob, originalName + "-1080p.jpg");
-                formData.append('status', 'publish');
-                fetch(pmc_vars.root + 'wp/v2/media', {
-                    method: 'POST',
-                    headers: { 'X-WP-Nonce': pmc_vars.nonce },
-                    body: formData
-                })
-                .then(r => r.json())
-                .then(res => {
-                    if (res.id) status.innerHTML = "<strong>Saved!</strong> <a href='" + res.link + "' target='_blank'>View in Library</a>";
-                    else status.textContent = "Upload failed.";
+                const fd = new FormData();
+                fd.append('file', blob, originalName + "-1080p.jpg");
+                fd.append('status', 'publish');
+                fetch(pmc_vars.root + 'wp/v2/media', { method: 'POST', headers: { 'X-WP-Nonce': pmc_vars.nonce }, body: fd })
+                .then(r => r.json()).then(res => {
+                    status.innerHTML = res.id ? "Saved! <a href='" + res.link + "' target='_blank'>View</a>" : "Failed.";
                     saveBtn.disabled = false;
                 });
             }, 'image/jpeg', 0.95);
         };
 
-        // DOWNLOAD TO COMPUTER
         dlBtn.onclick = () => {
-            const link = document.createElement('a');
-            link.download = originalName + "-1080p.jpg";
-            link.href = canvas.toDataURL('image/jpeg', 0.95);
-            link.click();
-            status.textContent = "Downloaded to computer.";
+            const a = document.createElement('a');
+            a.download = originalName + "-1080p.jpg";
+            a.href = canvas.toDataURL('image/jpeg', 0.95);
+            a.click();
         };
     })();
     </script>
