@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Pro Media Cropper
- * Description: Upload an image and crop to a 1920x1080 featured image
+ * Description: Upload an image and crop to a widescreen 1920x1080 featured image
  * Version: 3.4
  * Author: Gemini Developer
  */
@@ -254,3 +254,4 @@ function pmc_render_page() {
     </script>
     <?php
 }
+
