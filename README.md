@@ -1,6 +1,6 @@
 # Pro Media Cropper v3.4
 
-A professional-grade WordPress plugin for converting any media asset—including **PDFs, SVGs, and WebP**—into perfect 1920x1080 (16:9) images.
+A professional-grade WordPress plugin for converting any media asset—including **JPGs, PNGs, PDFs, SVGs, and WebP**—into perfect widescreen 1920x1080 (16:9) images.
 
 ## 🚀 Key Features in v3.4
 
