@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Upload an image and crop to a widescreen 1920x1080 featured image
- * Version: 3.4.1
+ * Version: 3.4.2
  * Author: Gemini Developer
  */
 
@@ -47,7 +47,7 @@ function pmc_render_page() {
         .pmc-secondary-btn { background: #f6f7f7; color: #2271b1; border: 1px solid #2271b1; padding: 10px; border-radius: 4px; width: 100%; font-weight: 600; cursor: pointer; }
         #pmc-loading { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10; font-weight:600;}
         
-        #pillarbox-controls { display: block; }
+        #pillarbox-controls { display: none; }
     </style>
 
     <div class="wrap">
@@ -70,8 +70,8 @@ function pmc_render_page() {
                 <div class="pmc-row">
                     <label>Crop Mode</label>
                     <div class="pmc-mode-toggle">
-                        <button id="mode-locked" class="pmc-mode-btn">Locked 16:9</button>
-                        <button id="mode-pillar" class="pmc-mode-btn active">Pillarbox</button>
+                        <button id="mode-locked" class="pmc-mode-btn active">Locked 16:9</button>
+                        <button id="mode-pillar" class="pmc-mode-btn">Pillarbox</button>
                     </div>
                 </div>
 
@@ -124,7 +124,7 @@ function pmc_render_page() {
         const pillarControls = document.getElementById('pillarbox-controls');
         const status = document.getElementById('pmc-status');
 
-        let cropper = null, originalName = 'image', isLocked = false;
+        let cropper = null, originalName = 'image', isLocked = true;
         const W = 1920, H = 1080;
         canvas.width = W; canvas.height = H;
 
@@ -254,5 +254,6 @@ function pmc_render_page() {
     </script>
     <?php
 }
+
 
 
