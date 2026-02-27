@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Upload an image and crop to a widescreen 1920x1080 featured image
- * Version: 3.4.2
+ * Version: 3.4.3
  * Author: Gemini Developer
  */
 
@@ -47,6 +47,13 @@ function pmc_render_page() {
         .pmc-secondary-btn { background: #f6f7f7; color: #2271b1; border: 1px solid #2271b1; padding: 10px; border-radius: 4px; width: 100%; font-weight: 600; cursor: pointer; }
         #pmc-loading { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10; font-weight:600;}
         
+        /* Filename input styling */
+        .pmc-filename-wrap { display: flex; align-items: center; background: #f6f7f7; border: 1px solid #ccd0d4; border-radius: 4px; overflow: hidden; transition: border-color 0.15s; }
+        .pmc-filename-wrap:focus-within { border-color: #2271b1; background: #fff; box-shadow: 0 0 0 1px #2271b1; }
+        #pmc-filename { flex: 1; border: none; background: transparent; padding: 8px 10px; font-size: 13px; outline: none; color: #1d2327; min-width: 0; }
+        #pmc-filename::placeholder { color: #a7aaad; }
+        .pmc-filename-suffix { padding: 8px 10px; color: #64748b; font-size: 12px; font-weight: 600; border-left: 1px solid #ccd0d4; white-space: nowrap; background: #f0f0f1; }
+
         #pillarbox-controls { display: none; }
     </style>
 
@@ -97,6 +104,14 @@ function pmc_render_page() {
                     </div>
                 </div>
 
+                <div class="pmc-row">
+                    <label>Output Filename</label>
+                    <div class="pmc-filename-wrap">
+                        <input type="text" id="pmc-filename" placeholder="upload a file to set filename">
+                        <span class="pmc-filename-suffix">-1080p.jpg</span>
+                    </div>
+                </div>
+
                 <div class="pmc-btn-group">
                     <button id="pmc-save-btn" class="pmc-primary-btn" disabled>Save to Media Library</button>
                     <button id="pmc-dl-btn" class="pmc-secondary-btn" disabled>Download JPG</button>
@@ -123,10 +138,15 @@ function pmc_render_page() {
         const btnPillar = document.getElementById('mode-pillar');
         const pillarControls = document.getElementById('pillarbox-controls');
         const status = document.getElementById('pmc-status');
+        const filenameInput = document.getElementById('pmc-filename');
 
         let cropper = null, originalName = 'image', isLocked = true;
         const W = 1920, H = 1080;
         canvas.width = W; canvas.height = H;
+
+        function getExportName() {
+            return (filenameInput.value.trim() || originalName) + '-1080p.jpg';
+        }
 
         async function getPdfLib() {
             return new Promise((resolve) => {
@@ -155,6 +175,7 @@ function pmc_render_page() {
             if (!file) return;
             loader.style.display = 'flex';
             originalName = file.name.split('.')[0];
+            filenameInput.value = originalName;
             try {
                 let url = (file.type === 'application/pdf') ? await renderPdf(file) : URL.createObjectURL(file);
                 if (cropper) cropper.destroy();
@@ -234,7 +255,7 @@ function pmc_render_page() {
             saveBtn.disabled = true; status.textContent = "Saving...";
             canvas.toBlob((blob) => {
                 const fd = new FormData();
-                fd.append('file', blob, originalName + "-1080p.jpg");
+                fd.append('file', blob, getExportName());
                 fd.append('status', 'publish');
                 fetch(pmc_vars.root + 'wp/v2/media', { method: 'POST', headers: { 'X-WP-Nonce': pmc_vars.nonce }, body: fd })
                 .then(r => r.json()).then(res => {
@@ -246,7 +267,7 @@ function pmc_render_page() {
 
         dlBtn.onclick = () => {
             const a = document.createElement('a');
-            a.download = originalName + "-1080p.jpg";
+            a.download = getExportName();
             a.href = canvas.toDataURL('image/jpeg', 0.95);
             a.click();
         };
@@ -254,6 +275,3 @@ function pmc_render_page() {
     </script>
     <?php
 }
-
-
-
