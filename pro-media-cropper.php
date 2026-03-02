@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Widescreen Media Upload and Crop
  * Description: Upload an image and crop to a widescreen 1920x1080 image
- * Version: 3.4.10
+ * Version: 3.4.11
  * Author: Pete Dibdin
  */
 
@@ -32,9 +32,9 @@ function pmc_render_page() {
         .pmc-sidebar { width: 340px; background: #fff; border: 1px solid #ccd0d4; padding: 20px; overflow-y: auto; }
         .pmc-editor-wrapper { background: #111; flex: 1; margin-bottom: 15px; border-radius: 4px; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;}
         #pmc-image { max-width: 100%; max-height: 100%; display: block; }
-        .pmc-preview-box { width: 100%; aspect-ratio: 16/9; background: #000; border: 1px solid #ddd; margin-bottom: 15px; overflow: hidden; }
+        .pmc-preview-box { width: 100%; aspect-ratio: 16/9; background: #000; border: 1px solid #ddd; margin-bottom: 10px; overflow: hidden; }
         #pmc-canvas { width: 100%; height: 100%; display: block; }
-        .pmc-row { margin-bottom: 15px; }
+        .pmc-row { margin-bottom: 10px; }
         .pmc-row label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 11px; text-transform: uppercase; color: #64748b; }
         
         /* Toggle Switch Styling */
@@ -120,7 +120,6 @@ function pmc_render_page() {
 
                 <div class="pmc-btn-group">
                     <button id="pmc-save-btn" class="pmc-primary-btn" disabled>Save to Media Library</button>
-                    <button id="pmc-dl-btn" class="pmc-secondary-btn" disabled>Download JPG</button>
                 </div>
                 <div id="pmc-status" style="margin-top:15px; font-size: 12px;"></div>
             </div>
@@ -134,7 +133,6 @@ function pmc_render_page() {
         const canvas = document.getElementById('pmc-canvas');
         const ctx = canvas.getContext('2d');
         const saveBtn = document.getElementById('pmc-save-btn');
-        const dlBtn = document.getElementById('pmc-dl-btn');
         const resetBtn = document.getElementById('pmc-reset-btn');
         const loader = document.getElementById('pmc-loading');
         const modeSelect = document.getElementById('pmc-mode');
@@ -186,7 +184,7 @@ function pmc_render_page() {
                 let url = (file.type === 'application/pdf') ? await renderPdf(file) : URL.createObjectURL(file);
                 if (cropper) cropper.destroy();
                 img.src = url;
-                img.onload = () => { initCropper(); saveBtn.disabled = dlBtn.disabled = false; loader.style.display = 'none'; };
+                img.onload = () => { initCropper(); saveBtn.disabled = false; loader.style.display = 'none'; };
             } catch (err) { alert(err.message); loader.style.display = 'none'; }
         };
 
@@ -295,17 +293,10 @@ function pmc_render_page() {
                 });
             }, 'image/jpeg', 0.95);
         };
-
-        dlBtn.onclick = () => {
-            const a = document.createElement('a');
-            a.download = getExportName();
-            a.href = canvas.toDataURL('image/jpeg', 0.95);
-            a.click();
-        };
-    })();
     </script>
     <?php
 }
+
 
 
 
