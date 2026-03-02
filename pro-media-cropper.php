@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Widescreen Media Upload and Crop
  * Description: Upload an image and crop to a widescreen 1920x1080 image
- * Version: 3.4.12
+ * Version: 3.4.13
  * Author: Pete Dibdin
  */
 
@@ -27,9 +27,9 @@ add_action('admin_enqueue_scripts', function($hook) {
 function pmc_render_page() {
     ?>
     <style>
-        .pmc-container { display: flex; gap: 20px; margin-top: 20px; max-width: 1300px; height: 82vh; }
+        .pmc-container { display: flex; gap: 20px; margin-top: 10px; max-width: 1300px; height: 82vh; }
         .pmc-main { flex: 1; background: #fff; border: 1px solid #ccd0d4; padding: 20px; display: flex; flex-direction: column; min-width: 0; }
-        .pmc-sidebar { width: 340px; background: #fff; border: 1px solid #ccd0d4; padding: 20px; overflow-y: auto; }
+        .pmc-sidebar { width: 340px; background: #fff; border: 1px solid #ccd0d4; padding: 15px; overflow-y: auto; overflow-x: hidden; }
         .pmc-editor-wrapper { background: #111; flex: 1; margin-bottom: 15px; border-radius: 4px; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;}
         #pmc-image { max-width: 100%; max-height: 100%; display: block; }
         .pmc-preview-box { width: 100%; aspect-ratio: 16/9; background: #000; border: 1px solid #ddd; margin-bottom: 10px; overflow: hidden; }
@@ -297,6 +297,7 @@ function pmc_render_page() {
     </script>
     <?php
 }
+
 
 
 
