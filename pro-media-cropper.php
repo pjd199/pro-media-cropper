@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Pro Media Cropper
- * Description: Upload an image and crop to a widescreen 1920x1080 featured image
- * Version: 3.4.3
+ * Plugin Name: Widescreen Media Upload and Crop
+ * Description: Upload an image and crop to a widescreen 1920x1080 image
+ * Version: 3.4.4
  * Author: Gemini Developer
  */
 
@@ -58,7 +58,7 @@ function pmc_render_page() {
     </style>
 
     <div class="wrap">
-        <h1>Pro Media Cropper v3.4</h1>
+        <h1>Pro Media Cropper</h1>
         <div class="pmc-container">
             <div class="pmc-main">
                 <div class="pmc-editor-wrapper">
@@ -108,7 +108,7 @@ function pmc_render_page() {
                     <label>Output Filename</label>
                     <div class="pmc-filename-wrap">
                         <input type="text" id="pmc-filename" placeholder="upload a file to set filename">
-                        <span class="pmc-filename-suffix">-1080p.jpg</span>
+                        <span class="pmc-filename-suffix">.jpg</span>
                     </div>
                 </div>
 
@@ -145,7 +145,7 @@ function pmc_render_page() {
         canvas.width = W; canvas.height = H;
 
         function getExportName() {
-            return (filenameInput.value.trim() || originalName) + '-1080p.jpg';
+            return (filenameInput.value.trim() || originalName) + '.jpg';
         }
 
         async function getPdfLib() {
@@ -275,3 +275,4 @@ function pmc_render_page() {
     </script>
     <?php
 }
+
