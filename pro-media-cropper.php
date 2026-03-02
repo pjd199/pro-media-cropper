@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Widescreen Media Upload and Crop
  * Description: Upload an image and crop to a widescreen 1920x1080 image
- * Version: 3.4.5
+ * Version: 3.4.6
  * Author: Gemini Developer
  */
 
@@ -95,7 +95,10 @@ function pmc_render_page() {
 
                     <div class="pmc-row" id="color-picker-wrap" style="display:none;">
                         <label>Custom Color / Eyedropper</label>
-                        <button id="pmc-eyedropper-btn" class="pmc-secondary-btn">💧 Pick from image</button>
+                        <div style="display:flex; gap:8px;">
+                            <input type="color" id="pmc-color" value="#2271b1" style="width:50px; height: 40px; cursor: pointer; border:none; padding:2px;">
+                            <button id="pmc-eyedropper-btn" class="pmc-secondary-btn" style="width:auto; padding: 0 12px;">💧 Pick from image</button>
+                        </div>
                     </div>
                     
                     <div class="pmc-row" id="blur-wrap">
@@ -212,7 +215,8 @@ function pmc_render_page() {
                 } else if (modeSelect.value === 'white') {
                     ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0,0,W,H);
                 } else if (modeSelect.value === 'custom') {
-                    ctx.fillStyle = colorPicker.value; ctx.fillRect(0,0,W,H);
+                    ctx.fillStyle = customColor;
+                    ctx.fillRect(0, 0, W, H);
                 }
             } else {
                 ctx.fillStyle = "#000000"; ctx.fillRect(0,0,W,H);
@@ -251,9 +255,15 @@ function pmc_render_page() {
         blurRange.oninput = update;
         colorPicker.oninput = update;
 
+        let customColor = '#2271b1';
         let eyedropperActive = false;
-        let customColor = '#000000';
-
+        const colorPicker = document.getElementById('pmc-color');
+        
+        colorPicker.oninput = () => {
+            customColor = colorPicker.value;
+            update();
+        };
+        
         document.getElementById('pmc-eyedropper-btn').onclick = () => {
             eyedropperActive = true;
             canvas.style.cursor = 'crosshair';
@@ -266,11 +276,11 @@ function pmc_render_page() {
             const y = Math.floor((e.clientY - rect.top) * (H / rect.height));
             const [r, g, b] = ctx.getImageData(x, y, 1, 1).data;
             customColor = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+            colorPicker.value = customColor; // keep the swatch in sync
             eyedropperActive = false;
             canvas.style.cursor = 'default';
             update();
         };
-
         saveBtn.onclick = () => {
             saveBtn.disabled = true; status.textContent = "Saving...";
             canvas.toBlob((blob) => {
@@ -295,5 +305,6 @@ function pmc_render_page() {
     </script>
     <?php
 }
+
 
 
