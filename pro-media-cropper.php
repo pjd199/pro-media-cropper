@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Widescreen Media Upload and Crop
  * Description: Upload an image and crop to a widescreen 1920x1080 image
- * Version: 3.4.4
+ * Version: 3.4.5
  * Author: Gemini Developer
  */
 
@@ -95,9 +95,9 @@ function pmc_render_page() {
 
                     <div class="pmc-row" id="color-picker-wrap" style="display:none;">
                         <label>Custom Color / Eyedropper</label>
-                        <input type="color" id="pmc-color" value="#2271b1" style="width: 100%; height: 40px; cursor: pointer;">
+                        <button id="pmc-eyedropper-btn" class="pmc-secondary-btn">💧 Pick from image</button>
                     </div>
-
+                    
                     <div class="pmc-row" id="blur-wrap">
                         <label>Blur Intensity</label>
                         <input type="range" id="pmc-blur" min="0" max="80" value="30" style="width: 100%;">
@@ -251,6 +251,26 @@ function pmc_render_page() {
         blurRange.oninput = update;
         colorPicker.oninput = update;
 
+        let eyedropperActive = false;
+        let customColor = '#000000';
+
+        document.getElementById('pmc-eyedropper-btn').onclick = () => {
+            eyedropperActive = true;
+            canvas.style.cursor = 'crosshair';
+        };
+        
+        canvas.onclick = (e) => {
+            if (!eyedropperActive || modeSelect.value !== 'custom') return;
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) * (W / rect.width));
+            const y = Math.floor((e.clientY - rect.top) * (H / rect.height));
+            const [r, g, b] = ctx.getImageData(x, y, 1, 1).data;
+            customColor = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+            eyedropperActive = false;
+            canvas.style.cursor = 'default';
+            update();
+        };
+
         saveBtn.onclick = () => {
             saveBtn.disabled = true; status.textContent = "Saving...";
             canvas.toBlob((blob) => {
@@ -275,4 +295,5 @@ function pmc_render_page() {
     </script>
     <?php
 }
+
 
