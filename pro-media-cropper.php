@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Widescreen Media Upload and Crop
  * Description: Upload an image and crop to a widescreen 1920x1080 image
- * Version: 3.4.6
+ * Version: 3.4.7
  * Author: Gemini Developer
  */
 
@@ -253,11 +253,9 @@ function pmc_render_page() {
         };
         
         blurRange.oninput = update;
-        colorPicker.oninput = update;
 
         let customColor = '#2271b1';
         let eyedropperActive = false;
-        const colorPicker = document.getElementById('pmc-color');
         
         colorPicker.oninput = () => {
             customColor = colorPicker.value;
@@ -305,6 +303,7 @@ function pmc_render_page() {
     </script>
     <?php
 }
+
 
 
 
