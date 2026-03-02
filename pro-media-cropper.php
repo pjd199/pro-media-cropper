@@ -3,7 +3,7 @@
  * Plugin Name: Widescreen Media Upload and Crop
  * Description: Upload an image and crop to a widescreen 1920x1080 image
  * Version: 3.4.10
- * Author: Gemini Developer
+ * Author: Pete Dibdin
  */
 
 if (!defined('ABSPATH')) exit;
@@ -306,6 +306,7 @@ function pmc_render_page() {
     </script>
     <?php
 }
+
 
 
 
