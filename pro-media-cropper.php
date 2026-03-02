@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Widescreen Media Upload and Crop
  * Description: Upload an image and crop to a widescreen 1920x1080 image
- * Version: 3.4.13
+ * Version: 3.4.14
  * Author: Pete Dibdin
  */
 
@@ -29,7 +29,7 @@ function pmc_render_page() {
     <style>
         .pmc-container { display: flex; gap: 20px; margin-top: 10px; max-width: 1300px; height: 82vh; }
         .pmc-main { flex: 1; background: #fff; border: 1px solid #ccd0d4; padding: 20px; display: flex; flex-direction: column; min-width: 0; }
-        .pmc-sidebar { width: 340px; background: #fff; border: 1px solid #ccd0d4; padding: 15px; overflow-y: auto; overflow-x: hidden; }
+        .pmc-sidebar { width: 340px; background: #fff; border: 1px solid #ccd0d4; padding: 15px; overflow: hidden; }
         .pmc-editor-wrapper { background: #111; flex: 1; margin-bottom: 15px; border-radius: 4px; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;}
         #pmc-image { max-width: 100%; max-height: 100%; display: block; }
         .pmc-preview-box { width: 100%; aspect-ratio: 16/9; background: #000; border: 1px solid #ddd; margin-bottom: 10px; overflow: hidden; }
@@ -96,8 +96,8 @@ function pmc_render_page() {
                     <div class="pmc-row" id="color-picker-wrap" style="display:none;">
                         <label>Custom Color</label>
                         <div style="display:flex; gap:8px;">
-                            <input type="color" id="pmc-color" value="#2271b1" style="width:50px; height: 40px; cursor: pointer; border:none; padding:2px;">
-                            <button id="pmc-eyedropper-btn" class="pmc-secondary-btn" style="width:auto; padding: 0 12px; display:flex; align-items:center; gap:6px;">
+                            <input type="color" id="pmc-color" value="#2271b1" style="width:50px; height: 32px; cursor: pointer; border:none; padding:2px;">
+                            <button id="pmc-eyedropper-btn" class="pmc-secondary-btn" style="width:auto; padding: 0 12px; height:32px; display:flex; align-items:center; gap:6px;">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="16" height="16" fill="currentColor"><path d="M405.6 93.2L304 194.8L294.6 185.4C282.1 172.9 261.8 172.9 249.3 185.4C236.8 197.9 236.8 218.2 249.3 230.7L409.3 390.7C421.8 403.2 442.1 403.2 454.6 390.7C467.1 378.2 467.1 357.9 454.6 345.4L445.2 336L546.8 234.4C585.8 195.4 585.8 132.2 546.8 93.3C507.8 54.4 444.6 54.3 405.7 93.3zM119.4 387.3C104.4 402.3 96 422.7 96 443.9L96 486.3L69.4 526.2C60.9 538.9 62.6 555.8 73.4 566.6C84.2 577.4 101.1 579.1 113.8 570.6L153.7 544L196.1 544C217.3 544 237.7 535.6 252.7 520.6L362.1 411.2L316.8 365.9L207.4 475.3C204.4 478.3 200.3 480 196.1 480L160 480L160 443.9C160 439.7 161.7 435.6 164.7 432.6L274.1 323.2L228.8 277.9L119.4 387.3z"/></svg>
                                 Pick from preview image
                             </button>
@@ -297,6 +297,7 @@ function pmc_render_page() {
     </script>
     <?php
 }
+
 
 
 
