@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Precision cropping for Social Media, YouTube, and Photography with automatic metadata tracking.
- * Version: 3.7.7
+ * Version: 3.8.3
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -36,11 +36,31 @@ add_action('admin_init', function() {
     }
 });
 
+add_action('wp_ajax_pmc_test_api', function() {
+    $p = sanitize_text_field($_POST['provider']);
+    $key = sanitize_text_field($_POST['key']);
+    if (!$key) wp_send_json_error('No key provided');
+    $url = ($p === 'pixabay') ? "https://pixabay.com/api/?key=$key&q=test" : 
+           (($p === 'unsplash') ? "https://api.unsplash.com/photos?client_id=$key&per_page=1" : 
+           "https://api.pexels.com/v1/curated?per_page=1");
+    $args = ($p === 'pexels') ? ['headers' => ['Authorization' => $key]] : [];
+    $resp = wp_remote_get($url, $args);
+    if (is_wp_error($resp)) wp_send_json_error($resp->get_error_message());
+    $code = wp_remote_retrieve_response_code($resp);
+    ($code === 200) ? wp_send_json_success('Connection Successful!') : wp_send_json_error('Failed with code: ' . $code);
+});
+
 function pmc_settings_page_html() {
     $def_provider = get_option('pmc_default_provider', 'pixabay');
     $def_ratio    = get_option('pmc_default_ratio', '16:9');
     $tracker      = get_option('pmc_cache_tracker', []);
     $count        = is_array($tracker) ? count($tracker) : 0;
+    
+    $provider_links = [
+        'pixabay'  => 'https://pixabay.com/service/license/',
+        'unsplash' => 'https://unsplash.com/license',
+        'pexels'   => 'https://www.pexels.com/license/'
+    ];
     ?>
     <div class="wrap">
         <h1>Pro Media Cropper Settings</h1>
@@ -72,25 +92,42 @@ function pmc_settings_page_html() {
                 <tr><th>Custom Dimensions (px)</th><td>
                     <input type="number" name="pmc_export_width" value="<?php echo esc_attr(get_option('pmc_export_width', '1920')); ?>" class="small-text"> x 
                     <input type="number" name="pmc_export_height" value="<?php echo esc_attr(get_option('pmc_export_height', '1080')); ?>" class="small-text">
-                    <p class="description">Used when "Custom Settings" is selected above.</p>
                 </td></tr>
                 <?php foreach(['pixabay' => 'Pixabay', 'unsplash' => 'Unsplash', 'pexels' => 'Pexels'] as $slug => $label): ?>
-                <tr><th><?php echo $label; ?> Key</th><td>
-                    <input type="text" id="pmc_<?php echo $slug; ?>_key" name="pmc_<?php echo $slug; ?>_key" value="<?php echo esc_attr(get_option('pmc_'.$slug.'_key')); ?>" class="regular-text">
-                    <button type="button" class="button pmc-test-btn" data-provider="<?php echo $slug; ?>">Test API</button>
-                </td></tr>
+                <tr>
+                    <th><?php echo $label; ?> Key</th>
+                    <td>
+                        <input type="text" id="pmc_<?php echo $slug; ?>_key" name="pmc_<?php echo $slug; ?>_key" value="<?php echo esc_attr(get_option('pmc_'.$slug.'_key')); ?>" class="regular-text">
+                        <button type="button" class="button pmc-test-btn" data-provider="<?php echo $slug; ?>">Test API</button>
+                        <p class="description">
+                            <a href="<?php echo $provider_links[$slug]; ?>" target="_blank" style="text-decoration:none;">⚖️ View <?php echo $label; ?> License</a>
+                        </p>
+                    </td>
+                </tr>
                 <?php endforeach; ?>
             </table>
             <?php submit_button(); ?>
         </form>
+
         <hr>
-        <div class="card" style="max-width: 400px; padding: 15px; margin-top: 20px;">
-            <h3>Search Cache Management</h3>
-            <p><strong>Currently Cached:</strong> <?php echo $count; ?> search result pages.</p>
-            <form method="post" action="">
-                <?php wp_nonce_field('pmc_clear_cache_action'); ?>
-                <input type="submit" name="pmc_clear_cache" class="button" value="Wipe Search Cache" <?php disabled($count, 0); ?>>
-            </form>
+        <div style="display: flex; gap: 30px; margin-top: 20px;">
+            <div class="card" style="flex: 1; max-width: 450px; padding: 15px; margin: 0;">
+                <h3>Search Cache Management</h3>
+                <p>The plugin caches stock search results for 24 hours to improve performance.</p>
+                <p><strong>Currently Cached:</strong> <?php echo $count; ?> search result pages.</p>
+                <form method="post" action="">
+                    <?php wp_nonce_field('pmc_clear_cache_action'); ?>
+                    <input type="submit" name="pmc_clear_cache" class="button" value="Wipe Search Cache" <?php disabled($count, 0); ?>>
+                </form>
+            </div>
+
+            <div class="card" style="flex: 1; max-width: 450px; padding: 15px; margin: 0;">
+                <h3>Plugin Information</h3>
+                <p><strong>Version:</strong> 3.8.3</p>
+                <p><strong>License:</strong> MIT</p>
+                <p><strong>Support:</strong> <a href="https://github.com/pjd199/pro-media-cropper" target="_blank">GitHub Repository</a></p>
+                <p class="description">Developed by Pete Dibdin for high-precision media workflow.</p>
+            </div>
         </div>
     </div>
     <script>
@@ -122,9 +159,7 @@ add_action('admin_enqueue_scripts', function($hook) {
         'nonce' => wp_create_nonce('wp_rest'), 
         'ajaxurl' => admin_url('admin-ajax.php'), 
         'root' => esc_url_raw(rest_url()),
-        'default_ratio' => get_option('pmc_default_ratio', '16:9'),
-        'custom_w' => get_option('pmc_export_width', '1920'),
-        'custom_h' => get_option('pmc_export_height', '1080')
+        'default_ratio' => get_option('pmc_default_ratio', '16:9')
     ]);
 });
 
@@ -167,7 +202,8 @@ function pmc_render_page() {
                     <button id="pmc-library-btn" class="button">Media Library</button>
                     <button id="pmc-stock-btn" class="button">Stock Images</button>
                     <div id="pmc-attribution" class="pmc-attribution-line"></div>
-                    <button id="pmc-reset-btn" class="button" style="margin-left:auto;">Reset</button>
+                    <button id="pmc-clear-btn" class="button" title="Clear all and start over">Clear/New</button>
+                    <button id="pmc-reset-btn" class="button">Reset Crop</button>
                 </div>
             </div>
             <div class="pmc-sidebar">
@@ -196,8 +232,8 @@ function pmc_render_page() {
                 </div>
                 <div id="pillarbox-controls" style="display:none;">
                     <div class="pmc-row"><label>Pillar Style</label><select id="pmc-mode" style="width: 100%;"><option value="echo">Echo Blur</option><option value="black">Black</option><option value="white">White</option><option value="custom">Custom</option></select></div>
-                    <div class="pmc-row" id="color-picker-wrap" style="display:none;"><label>Custom Color</label><div style="display:flex; gap:8px;"><input type="color" id="pmc-color" value="#2271b1" style="width:50px; height:32px;"><button id="pmc-eyedropper-btn" class="button">Pick</button></div></div>
-                    <div class="pmc-row" id="blur-wrap"><label>Blur</label><input type="range" id="pmc-blur" min="0" max="80" value="30" style="width: 100%;"></div>
+                    <div class="pmc-row" id="color-picker-wrap" style="display:none;"><label>Custom Color</label><div style="display:flex; gap:8px;"><input type="color" id="pmc-color" value="#2271b1" style="width:100%;"></div></div>
+                    <div class="pmc-row" id="blur-wrap"><label>Blur Intensity</label><input type="range" id="pmc-blur" min="0" max="80" value="30" style="width: 100%;"></div>
                 </div>
                 <div class="pmc-row"><label>Filename</label><div class="pmc-filename-wrap"><input type="text" id="pmc-filename" placeholder="filename"><span style="padding:8px; background:#f0f0f1; border-left:1px solid #ccd0d4;">.jpg</span></div></div>
                 <div style="margin-top: auto; padding-top: 10px;"><button id="pmc-save-btn" class="button button-primary" style="width:100%; padding:10px;" disabled>Save to Library</button></div>
@@ -244,6 +280,7 @@ function pmc_render_page() {
                 currentBlobUrl = null; img.src = ''; img.classList.remove('loaded');
                 filenameInput.value = ''; currentMeta = {}; attrLine.innerHTML = ''; ctx.clearRect(0, 0, exportW, exportH);
                 document.getElementById('pmc-save-btn').disabled = true;
+                statusCont.innerHTML = '';
             }
 
             function loadSource(url, name, meta = {}) {
@@ -297,7 +334,7 @@ function pmc_render_page() {
 
             document.getElementById('pmc-library-btn').onclick = (e) => {
                 e.preventDefault();
-                const frame = wp.media({ title: 'Select Image to Crop', multiple: false, library: { type: 'image' } });
+                const frame = wp.media({ title: 'Select Image', multiple: false, library: { type: 'image' } });
                 frame.on('select', () => {
                     const attachment = frame.state().get('selection').first().toJSON();
                     loadSource(attachment.url, attachment.filename, { display_path: attachment.title });
@@ -312,21 +349,25 @@ function pmc_render_page() {
             document.getElementById('pmc-blur').oninput = update;
             document.getElementById('pmc-color').oninput = update;
             document.getElementById('pmc-reset-btn').onclick = () => { if(cropper) initCropper(); };
+            document.getElementById('pmc-clear-btn').onclick = clearUI;
             document.getElementById('pmc-stock-btn').onclick = () => { document.getElementById('pmc-search-modal').style.display='block'; document.getElementById('pmc-stock-query').focus(); };
             
             document.getElementById('pmc-save-btn').onclick = function() {
-                const btn = this; btn.disabled = true;
-                statusCont.innerHTML = '<div style="background:#f0f0f1; padding:5px; border-radius:3px;">Saving...</div>';
+                const btn = this; const oldText = btn.textContent;
+                btn.disabled = true; btn.textContent = 'Saving...';
+                statusCont.innerHTML = '<div style="background:#f0f0f1; padding:5px; border-radius:3px;">Uploading...</div>';
+                
                 canvas.toBlob((blob) => {
                     const fd = new FormData();
                     fd.append('file', blob, (filenameInput.value || 'crop') + '.jpg');
                     fd.append('description', currentMeta.description || '');
                     fetch(pmc_vars.root + 'wp/v2/media', { method: 'POST', headers: { 'X-WP-Nonce': pmc_vars.nonce }, body: fd })
                     .then(r => r.json()).then(res => {
+                        btn.disabled = false; btn.textContent = oldText;
                         if (res.id) {
-                            statusCont.innerHTML = `<div style="color:green; font-weight:600;">Saved! <a href="${res.link}" target="_blank">View</a></div>`;
-                            setTimeout(() => statusCont.innerHTML = '', 5000); clearUI();
-                        } else { statusCont.innerHTML = '<div style="color:red;">Save failed.</div>'; btn.disabled = false; }
+                            statusCont.innerHTML = `<div style="color:green; font-weight:600;">✅ Saved! <a href="${res.link}" target="_blank">View</a></div>`;
+                            setTimeout(() => statusCont.innerHTML = '', 8000);
+                        } else { statusCont.innerHTML = '<div style="color:red;">Save failed.</div>'; }
                     });
                 }, 'image/jpeg', 0.92);
             };
@@ -367,9 +408,11 @@ function pmc_render_page() {
    ------------------------------------------------------------------------- */
 add_action('wp_ajax_pmc_search_stock', function() {
     $q = sanitize_text_field($_POST['query']); $p = sanitize_text_field($_POST['provider']); $pg = intval($_POST['page']);
-    $cache_key = 'pmc_v375_' . md5($p . '_' . $q . '_' . $pg);
+    $cache_key = 'pmc_v383_' . md5($p . '_' . $q . '_' . $pg);
     if ($cached = get_transient($cache_key)) wp_send_json_success($cached);
     $results = []; $key = get_option('pmc_'.$p.'_key');
+    if (!$key) wp_send_json_error('Missing API Key');
+
     if ($p === 'pixabay') {
         $resp = wp_remote_get("https://pixabay.com/api/?key=$key&q=".urlencode($q)."&page=$pg&per_page=20");
         $data = json_decode(wp_remote_retrieve_body($resp), true);
