@@ -1,0 +1,72 @@
+name: Release WordPress Plugin
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Define the plugin slug here
+env:
+  PLUGIN_SLUG: pro-media-cropper
+
+jobs:
+  build_release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Get Plugin Version
+        id: get_version
+        run: |
+          # Look for version in src/[plugin-slug].php
+          VERSION=$(grep -m 1 "Version:" src/${{ env.PLUGIN_SLUG }}.php | awk '{print $NF}' | tr -d '\r')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Validate Release Version
+        id: check_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check if this specific version tag already exists on GitHub
+          if gh release view v${{ env.VERSION }} >/dev/null 2>&1; then
+            echo "::error::Release v${{ env.VERSION }} already exists! Update version in src/${{ env.PLUGIN_SLUG }}.php."
+            exit 1
+          else
+            echo "Version is new. Proceeding..."
+          fi
+
+      - name: Prepare Plugin for Zipping
+        run: |
+          # Create a folder named after the plugin-slug
+          mkdir -p ${{ env.PLUGIN_SLUG }}
+          
+          # Copy all source files into that folder
+          cp -r src/* ${{ env.PLUGIN_SLUG }}/
+          
+          # Include root README if available
+          if [ -f README.md ]; then cp README.md ${{ env.PLUGIN_SLUG }}/; fi
+
+      - name: Create Zip Archive
+        run: |
+          # Create [plugin-slug].zip containing the [plugin-slug] folder
+          zip -r ${{ env.PLUGIN_SLUG }}-${{ env.VERSION }}.zip ${{ env.PLUGIN_SLUG }}/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Release v${{ env.VERSION }}
+          files: ${{ env.PLUGIN_SLUG }}-${{ env.VERSION }}.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post-Cleanup
+        if: always()
+        run: |
+          # Clean up the runner workspace
+          rm -rf ${{ env.PLUGIN_SLUG }}
+          rm -f ${{ env.PLUGIN_SLUG }}.zip
