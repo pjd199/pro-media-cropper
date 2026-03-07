@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Widescreen Media Cropper
- * Description: Upload an image or search stock images, then crop to a widescreen 1920x1080 image.
- * Version: 3.5.0
+ * Plugin Name: Pro Media Cropper
+ * Description: Upload an image or search stock images, then crop to a configurable widescreen image.
+ * Version: 3.6.0
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -15,8 +15,8 @@ if (!defined('ABSPATH')) exit;
    ------------------------------------------------------------------------- */
 
 add_action('admin_menu', function() {
-    add_media_page('Widescreen Media Cropper', 'Widescreen Media Cropper', 'publish_posts', 'pro-media-cropper', 'pmc_render_page');
-    add_options_page('Widescreen Media Cropper Settings', 'Widescreen Media Cropper', 'manage_options', 'pmc-settings', 'pmc_settings_page_html');
+    add_media_page('Pro Media Cropper', 'Pro Media Cropper', 'publish_posts', 'pro-media-cropper', 'pmc_render_page');
+    add_options_page('Pro Media Cropper Settings', 'Pro Media Cropper', 'manage_options', 'pmc-settings', 'pmc_settings_page_html');
 });
 
 add_filter('admin_title', function($admin_title, $title) {
@@ -32,6 +32,8 @@ add_action('admin_init', function() {
     register_setting('pmc_group', 'pmc_unsplash_key');
     register_setting('pmc_group', 'pmc_pexels_key');
     register_setting('pmc_group', 'pmc_default_provider');
+    register_setting('pmc_group', 'pmc_export_width');
+    register_setting('pmc_group', 'pmc_export_height');
 
     if (isset($_POST['pmc_clear_cache']) && check_admin_referer('pmc_clear_cache_action')) {
         $tracker = get_option('pmc_cache_tracker', []);
@@ -55,12 +57,18 @@ add_action('wp_ajax_pmc_test_api', function() {
 });
 
 function pmc_settings_page_html() {
+    $default_provider = get_option('pmc_default_provider', 'pixabay');
     $tracker = get_option('pmc_cache_tracker', []);
     $count = is_array($tracker) ? count($tracker) : 0;
-    $default_provider = get_option('pmc_default_provider', 'pixabay');
+    
+    $licenses = [
+        'pixabay' => 'https://pixabay.com/service/license/',
+        'unsplash' => 'https://unsplash.com/license',
+        'pexels' => 'https://www.pexels.com/license/'
+    ];
     ?>
     <div class="wrap">
-        <h1>Widescreen Media Cropper Settings</h1>
+        <h1>Pro Media Cropper Settings</h1>
         <?php settings_errors('pmc_messages'); ?>
         <form method="post" action="options.php">
             <?php settings_fields('pmc_group'); ?>
@@ -75,13 +83,21 @@ function pmc_settings_page_html() {
                         </select>
                     </td>
                 </tr>
+                <tr>
+                    <th>Export Dimensions (px)</th>
+                    <td>
+                        <input type="number" name="pmc_export_width" value="<?php echo esc_attr(get_option('pmc_export_width', '1920')); ?>" class="small-text"> x 
+                        <input type="number" name="pmc_export_height" value="<?php echo esc_attr(get_option('pmc_export_height', '1080')); ?>" class="small-text">
+                        <p class="description">Width x Height in pixels.</p>
+                    </td>
+                </tr>
                 <?php foreach(['pixabay' => 'Pixabay', 'unsplash' => 'Unsplash', 'pexels' => 'Pexels'] as $slug => $label): ?>
                 <tr>
                     <th><?php echo $label; ?> Key</th>
                     <td>
                         <input type="text" id="pmc_<?php echo $slug; ?>_key" name="pmc_<?php echo $slug; ?>_key" value="<?php echo esc_attr(get_option('pmc_'.$slug.'_key')); ?>" class="regular-text">
                         <button type="button" class="button pmc-test-btn" data-provider="<?php echo $slug; ?>">Test API</button>
-                        <p class="description"><a href="#" target="_blank">View <?php echo $label; ?> License</a></p>
+                        <p class="description"><a href="<?php echo $licenses[$slug]; ?>" target="_blank" rel="noopener noreferrer">View <?php echo $label; ?> License Terms &raquo;</a></p>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -150,16 +166,21 @@ add_action('admin_enqueue_scripts', function($hook) {
     if ($hook !== 'media_page_pro-media-cropper') return;
     wp_enqueue_style('cropper-css', 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css');
     wp_enqueue_script('cropper-js', 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js', ['jquery'], null, true);
-    wp_enqueue_script('pdf-js', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', [], null, true);
+    // Explicit PDF.js versioning for library and worker
+    wp_enqueue_script('pdf-js', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', [], '3.11.174', true);
     wp_localize_script('cropper-js', 'pmc_vars', [
         'nonce' => wp_create_nonce('wp_rest'), 
         'ajaxurl' => admin_url('admin-ajax.php'), 
         'root' => esc_url_raw(rest_url()),
-        'default_provider' => get_option('pmc_default_provider', 'pixabay')
+        'default_provider' => get_option('pmc_default_provider', 'pixabay'),
+        'export_width' => get_option('pmc_export_width', '1920'),
+        'export_height' => get_option('pmc_export_height', '1080')
     ]);
 });
 
 function pmc_render_page() {
+    $w = get_option('pmc_export_width', '1920');
+    $h = get_option('pmc_export_height', '1080');
     ?>
     <style>
         .pmc-container { display: flex; gap: 20px; margin-top: 10px; height: calc(100vh - 120px); min-height: 550px; }
@@ -190,7 +211,7 @@ function pmc_render_page() {
     </style>
 
     <div class="wrap" style="overflow: hidden;">
-        <h1>Widescreen Media Cropper</h1>
+        <h1>Pro Media Cropper</h1>
         <div class="pmc-container">
             <div class="pmc-main">
                 <div class="pmc-editor-wrapper">
@@ -208,12 +229,12 @@ function pmc_render_page() {
 
             <div class="pmc-sidebar">
                 <div id="pmc-status-container"></div>
-                <label>Export Preview (1920x1080)</label>
+                <label>Export Preview (<?php echo esc_html($w . 'x' . $h); ?>)</label>
                 <div class="pmc-preview-box"><canvas id="pmc-canvas"></canvas></div>
                 <div class="pmc-row">
                     <label>Crop Mode</label>
                     <div class="pmc-mode-toggle">
-                        <button id="mode-locked" class="pmc-mode-btn active">Locked 16:9</button>
+                        <button id="mode-locked" class="pmc-mode-btn active">Locked Ratio</button>
                         <button id="mode-pillar" class="pmc-mode-btn">Pillarbox</button>
                     </div>
                 </div>
@@ -249,163 +270,191 @@ function pmc_render_page() {
 
     <script>
     (function() {
-        const canvas = document.getElementById('pmc-canvas'), ctx = canvas.getContext('2d');
-        const img = document.getElementById('pmc-image'), loader = document.getElementById('pmc-loading');
-        const filenameInput = document.getElementById('pmc-filename'), statusCont = document.getElementById('pmc-status-container'), attrLine = document.getElementById('pmc-attribution');
-        let cropper = null, isLocked = true, currentMeta = {}, stockPage = 1, stockLoading = false, currentBlobUrl = null;
-        const W = 1920, H = 1080; canvas.width = W; canvas.height = H;
-
-        function clearUI() {
-            if (cropper) { cropper.destroy(); cropper = null; }
-            if (currentBlobUrl && currentBlobUrl.startsWith('blob:')) URL.revokeObjectURL(currentBlobUrl);
-            currentBlobUrl = null; img.src = ''; img.classList.remove('loaded');
-            filenameInput.value = ''; currentMeta = {}; attrLine.innerHTML = ''; ctx.clearRect(0, 0, W, H);
-            document.getElementById('pmc-save-btn').disabled = true;
-        }
-
-        async function renderPdf(file) {
-            const pdfjsLib = window['pdfjs-dist/build/pdf'];
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-            const pdf = await pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
-            const page = await pdf.getPage(1);
-            const vp = page.getViewport({scale: 2.5});
-            const c = document.createElement('canvas'); c.height = vp.height; c.width = vp.width;
-            await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise;
-            return c.toDataURL('image/png');
-        }
-
-        function loadSource(url, name, meta = {}) {
-            clearUI(); 
-            currentBlobUrl = url; loader.style.display = 'flex'; currentMeta = meta;
-            filenameInput.value = name.toLowerCase().replace(/\s+/g, '-');
-            
-            if (meta.link) {
-                attrLine.innerHTML = `Photo by ${meta.author} on <a href="${meta.link}" target="_blank">${meta.source}</a>`;
-            } else if (meta.display_path) {
-                attrLine.textContent = meta.display_path;
+        const initUI = () => {
+            if (typeof pmc_vars === 'undefined' || typeof Cropper === 'undefined') {
+                setTimeout(initUI, 50);
+                return;
             }
 
-            img.crossOrigin = "anonymous";
-            img.src = url.includes('blob:') ? url : url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
-            img.onload = () => { initCropper(); img.classList.add('loaded'); document.getElementById('pmc-save-btn').disabled = false; loader.style.display = 'none'; };
-        }
+            const canvas = document.getElementById('pmc-canvas'), ctx = canvas.getContext('2d');
+            const img = document.getElementById('pmc-image'), loader = document.getElementById('pmc-loading');
+            const filenameInput = document.getElementById('pmc-filename'), statusCont = document.getElementById('pmc-status-container'), attrLine = document.getElementById('pmc-attribution');
+            let cropper = null, isLocked = true, currentMeta = {}, stockPage = 1, stockLoading = false, currentBlobUrl = null;
+            
+            const W = parseInt(pmc_vars.export_width) || 1920, H = parseInt(pmc_vars.export_height) || 1080; 
+            canvas.width = W; canvas.height = H;
 
-        function initCropper() {
-            if (cropper) cropper.destroy();
-            cropper = new Cropper(img, { aspectRatio: isLocked ? 16/9 : NaN, viewMode: 1, crop: update });
-        }
+            function clearUI() {
+                if (cropper) { cropper.destroy(); cropper = null; }
+                if (currentBlobUrl && currentBlobUrl.startsWith('blob:')) URL.revokeObjectURL(currentBlobUrl);
+                currentBlobUrl = null; img.src = ''; img.classList.remove('loaded');
+                filenameInput.value = ''; currentMeta = {}; attrLine.innerHTML = ''; ctx.clearRect(0, 0, W, H);
+                document.getElementById('pmc-save-btn').disabled = true;
+            }
 
-        function update() {
-            if (!cropper || !cropper.ready) return;
-            const crop = cropper.getCroppedCanvas({imageSmoothingQuality: 'high'});
-            ctx.clearRect(0, 0, W, H);
-            if (!isLocked) {
-                const mode = document.getElementById('pmc-mode').value;
-                if (mode === 'echo') {
-                    ctx.save(); ctx.filter = `blur(${document.getElementById('pmc-blur').value}px) brightness(0.6)`;
-                    ctx.drawImage(crop, -100, -100, W + 200, H + 200); ctx.restore();
-                } else {
-                    ctx.fillStyle = (mode === 'white') ? "#FFF" : (mode === 'custom' ? document.getElementById('pmc-color').value : "#000");
-                    ctx.fillRect(0,0,W,H);
+            async function renderPdf(file) {
+                try {
+                    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    
+                    const arrayBuffer = await file.arrayBuffer();
+                    const loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
+                    const pdf = await loadingTask.promise;
+                    const page = await pdf.getPage(1);
+                    
+                    // High resolution render
+                    const viewport = page.getViewport({scale: 3.0});
+                    const c = document.createElement('canvas');
+                    const context = c.getContext('2d');
+                    c.height = viewport.height;
+                    c.width = viewport.width;
+                    
+                    await page.render({canvasContext: context, viewport: viewport}).promise;
+                    return c.toDataURL('image/png');
+                } catch (err) {
+                    console.error("PDF Render Error:", err);
+                    alert("Failed to read PDF file.");
+                    return null;
                 }
-            } else { ctx.fillStyle = "#000"; ctx.fillRect(0,0,W,H); }
-            const r = Math.min(W / crop.width, H / crop.height);
-            const nw = crop.width * r, nh = crop.height * r;
-            ctx.drawImage(crop, (W - nw)/2, (H - nh)/2, nw, nh);
-        }
+            }
 
-        window.pmcStartNewSearch = function() {
-            stockPage = 1; stockLoading = false;
-            document.getElementById('pmc-stock-results').innerHTML = '<div id="pmc-stock-load-sentinel"></div>';
-            setupObserver();
-            fetchStock();
-        };
-
-        function fetchStock() {
-            const q = document.getElementById('pmc-stock-query').value;
-            if (stockLoading || !q) return; 
-            stockLoading = true;
-            const sentinel = document.getElementById('pmc-stock-load-sentinel');
-            sentinel.innerHTML = '<div class="pmc-spinner"></div>';
-
-            jQuery.post(pmc_vars.ajaxurl, { action: 'pmc_search_stock', query: q, provider: document.getElementById('pmc-stock-provider').value, page: stockPage }, function(res) {
-                const grid = document.getElementById('pmc-stock-results');
-                if (res.success && res.data.length) {
-                    res.data.forEach(item => {
-                        let i = document.createElement('img'); i.src = item.thumb;
-                        i.onclick = () => {
-                            document.getElementById('pmc-search-modal').style.display='none';
-                            const cp = `Copyright: ${item.author} via ${item.source} | ${item.desc}`;
-                            loadSource(item.full, q, { description: cp, author: item.author, source: item.source, link: item.link });
-                        };
-                        grid.insertBefore(i, sentinel);
-                    });
-                    stockPage++;
-                    sentinel.innerHTML = '';
-                    stockLoading = false;
-                } else { 
-                    sentinel.textContent = "End of results.";
-                    stockLoading = false;
+            function loadSource(url, name, meta = {}) {
+                if(!url) return;
+                clearUI(); 
+                currentBlobUrl = url; loader.style.display = 'flex'; currentMeta = meta;
+                filenameInput.value = name.toLowerCase().replace(/\s+/g, '-');
+                
+                if (meta.link) {
+                    attrLine.innerHTML = `Photo by ${meta.author} on <a href="${meta.link}" target="_blank">${meta.source}</a>`;
+                } else if (meta.display_path) {
+                    attrLine.textContent = meta.display_path;
                 }
-            }).fail(() => { stockLoading = false; });
-        }
 
-        function setupObserver() {
-            const grid = document.getElementById('pmc-stock-results');
-            const sentinel = document.getElementById('pmc-stock-load-sentinel');
-            const observer = new IntersectionObserver((entries) => {
-                if (entries[0].isIntersecting && !stockLoading) fetchStock();
-            }, { root: grid, threshold: 0.1 });
-            observer.observe(sentinel);
-        }
+                img.crossOrigin = "anonymous";
+                img.src = url.includes('data:image') || url.includes('blob:') ? url : url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+                img.onload = () => { initCropper(); img.classList.add('loaded'); document.getElementById('pmc-save-btn').disabled = false; loader.style.display = 'none'; };
+            }
 
-        document.getElementById('pmc-file-input').onchange = async (e) => {
-            const f = e.target.files[0]; if(!f) return;
-            const url = (f.type === 'application/pdf') ? await renderPdf(f) : URL.createObjectURL(f);
-            loadSource(url, f.name.split('.')[0], { 
-                description: `Manual upload: ${f.name} (uploaded ${new Date().toLocaleString()})`,
-                display_path: f.name
-            });
-        };
+            function initCropper() {
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(img, { aspectRatio: isLocked ? W/H : NaN, viewMode: 1, crop: update });
+            }
 
-        document.getElementById('mode-locked').onclick = function() { isLocked = true; this.classList.add('active'); document.getElementById('mode-pillar').classList.remove('active'); document.getElementById('pillarbox-controls').style.display='none'; initCropper(); };
-        document.getElementById('mode-pillar').onclick = function() { isLocked = false; this.classList.add('active'); document.getElementById('mode-locked').classList.remove('active'); document.getElementById('pillarbox-controls').style.display='block'; initCropper(); };
-        document.getElementById('pmc-mode').onchange = function() { document.getElementById('blur-wrap').style.display = (this.value==='echo'?'block':'none'); document.getElementById('color-picker-wrap').style.display = (this.value==='custom'?'block':'none'); update(); };
-        document.getElementById('pmc-blur').oninput = update;
-        document.getElementById('pmc-color').oninput = update;
-        document.getElementById('pmc-reset-btn').onclick = () => { if(cropper) initCropper(); };
-        document.getElementById('pmc-stock-btn').onclick = () => { document.getElementById('pmc-search-modal').style.display='block'; document.getElementById('pmc-stock-query').focus(); };
-        document.getElementById('pmc-stock-query').onkeypress = (e) => { if(e.key==='Enter') window.pmcStartNewSearch(); };
-
-        document.getElementById('pmc-save-btn').onclick = function() {
-            const btn = this; btn.disabled = true;
-            statusCont.innerHTML = '<div class="pmc-success-flash">Processing...</div>';
-            canvas.toBlob((blob) => {
-                const fd = new FormData();
-                fd.append('file', blob, (filenameInput.value || 'crop') + '.jpg');
-                fd.append('description', currentMeta.description || '');
-                fetch(pmc_vars.root + 'wp/v2/media', { method: 'POST', headers: { 'X-WP-Nonce': pmc_vars.nonce }, body: fd })
-                .then(r => r.json()).then(res => {
-                    if (res.id) {
-                        statusCont.innerHTML = `<div class="pmc-success-flash">Saved! <a href="${res.link}" target="_blank">View in Library</a></div>`;
-                        setTimeout(() => statusCont.innerHTML = '', 6000);
-                        clearUI();
+            function update() {
+                if (!cropper || !cropper.ready) return;
+                const crop = cropper.getCroppedCanvas({imageSmoothingQuality: 'high'});
+                ctx.clearRect(0, 0, W, H);
+                if (!isLocked) {
+                    const mode = document.getElementById('pmc-mode').value;
+                    if (mode === 'echo') {
+                        ctx.save(); ctx.filter = `blur(${document.getElementById('pmc-blur').value}px) brightness(0.6)`;
+                        ctx.drawImage(crop, -100, -100, W + 200, H + 200); ctx.restore();
                     } else {
-                        statusCont.innerHTML = '<div class="pmc-success-flash" style="background:#f8d7da; color:#721c24;">Failed to save.</div>';
-                        btn.disabled = false;
+                        ctx.fillStyle = (mode === 'white') ? "#FFF" : (mode === 'custom' ? document.getElementById('pmc-color').value : "#000");
+                        ctx.fillRect(0,0,W,H);
                     }
+                } else { ctx.fillStyle = "#000"; ctx.fillRect(0,0,W,H); }
+                const r = Math.min(W / crop.width, H / crop.height);
+                const nw = crop.width * r, nh = crop.height * r;
+                ctx.drawImage(crop, (W - nw)/2, (H - nh)/2, nw, nh);
+            }
+
+            window.pmcStartNewSearch = function() {
+                stockPage = 1; stockLoading = false;
+                document.getElementById('pmc-stock-results').innerHTML = '<div id="pmc-stock-load-sentinel"></div>';
+                setupObserver();
+                fetchStock();
+            };
+
+            function fetchStock() {
+                const q = document.getElementById('pmc-stock-query').value;
+                if (stockLoading || !q) return; 
+                stockLoading = true;
+                const sentinel = document.getElementById('pmc-stock-load-sentinel');
+                sentinel.innerHTML = '<div class="pmc-spinner"></div>';
+
+                jQuery.post(pmc_vars.ajaxurl, { action: 'pmc_search_stock', query: q, provider: document.getElementById('pmc-stock-provider').value, page: stockPage }, function(res) {
+                    const grid = document.getElementById('pmc-stock-results');
+                    if (res.success && res.data.length) {
+                        res.data.forEach(item => {
+                            let i = document.createElement('img'); i.src = item.thumb;
+                            i.onclick = () => {
+                                document.getElementById('pmc-search-modal').style.display='none';
+                                const cp = `Copyright: ${item.author} via ${item.source} | ${item.desc}`;
+                                loadSource(item.full, q, { description: cp, author: item.author, source: item.source, link: item.link });
+                            };
+                            grid.insertBefore(i, sentinel);
+                        });
+                        stockPage++;
+                        sentinel.innerHTML = '';
+                        stockLoading = false;
+                    } else { 
+                        sentinel.textContent = "End of results.";
+                        stockLoading = false;
+                    }
+                }).fail(() => { stockLoading = false; });
+            }
+
+            function setupObserver() {
+                const grid = document.getElementById('pmc-stock-results');
+                const sentinel = document.getElementById('pmc-stock-load-sentinel');
+                const observer = new IntersectionObserver((entries) => {
+                    if (entries[0].isIntersecting && !stockLoading) fetchStock();
+                }, { root: grid, threshold: 0.1 });
+                observer.observe(sentinel);
+            }
+
+            document.getElementById('pmc-file-input').onchange = async (e) => {
+                const f = e.target.files[0]; if(!f) return;
+                loader.style.display = 'flex';
+                const url = (f.type === 'application/pdf') ? await renderPdf(f) : URL.createObjectURL(f);
+                loadSource(url, f.name.split('.')[0], { 
+                    description: `Manual upload: ${f.name}`,
+                    display_path: f.name
                 });
-            }, 'image/jpeg', 0.95);
+            };
+
+            document.getElementById('mode-locked').onclick = function() { isLocked = true; this.classList.add('active'); document.getElementById('mode-pillar').classList.remove('active'); document.getElementById('pillarbox-controls').style.display='none'; initCropper(); };
+            document.getElementById('mode-pillar').onclick = function() { isLocked = false; this.classList.add('active'); document.getElementById('mode-locked').classList.remove('active'); document.getElementById('pillarbox-controls').style.display='block'; initCropper(); };
+            document.getElementById('pmc-mode').onchange = function() { document.getElementById('blur-wrap').style.display = (this.value==='echo'?'block':'none'); document.getElementById('color-picker-wrap').style.display = (this.value==='custom'?'block':'none'); update(); };
+            document.getElementById('pmc-blur').oninput = update;
+            document.getElementById('pmc-color').oninput = update;
+            document.getElementById('pmc-reset-btn').onclick = () => { if(cropper) initCropper(); };
+            document.getElementById('pmc-stock-btn').onclick = () => { document.getElementById('pmc-search-modal').style.display='block'; document.getElementById('pmc-stock-query').focus(); };
+            document.getElementById('pmc-stock-query').onkeypress = (e) => { if(e.key==='Enter') window.pmcStartNewSearch(); };
+
+            document.getElementById('pmc-save-btn').onclick = function() {
+                const btn = this; btn.disabled = true;
+                statusCont.innerHTML = '<div class="pmc-success-flash">Processing...</div>';
+                canvas.toBlob((blob) => {
+                    const fd = new FormData();
+                    fd.append('file', blob, (filenameInput.value || 'crop') + '.jpg');
+                    fd.append('description', currentMeta.description || '');
+                    fetch(pmc_vars.root + 'wp/v2/media', { method: 'POST', headers: { 'X-WP-Nonce': pmc_vars.nonce }, body: fd })
+                    .then(r => r.json()).then(res => {
+                        if (res.id) {
+                            statusCont.innerHTML = `<div class="pmc-success-flash">Saved! <a href="${res.link}" target="_blank">View in Library</a></div>`;
+                            setTimeout(() => statusCont.innerHTML = '', 6000);
+                            clearUI();
+                        } else {
+                            statusCont.innerHTML = '<div class="pmc-success-flash" style="background:#f8d7da; color:#721c24;">Failed to save.</div>';
+                            btn.disabled = false;
+                        }
+                    });
+                }, 'image/jpeg', 0.95);
+            };
+
+            document.getElementById('pmc-eyedropper-btn').onclick = () => { canvas.style.cursor = 'crosshair'; canvas.onclick = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) * (W / rect.width)), y = Math.floor((e.clientY - rect.top) * (H / rect.height));
+                const [r, g, b] = ctx.getImageData(x, y, 1, 1).data;
+                const hex = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+                document.getElementById('pmc-color').value = hex;
+                canvas.style.cursor = 'default'; canvas.onclick = null; update();
+            }};
         };
 
-        document.getElementById('pmc-eyedropper-btn').onclick = () => { canvas.style.cursor = 'crosshair'; canvas.onclick = (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = Math.floor((e.clientX - rect.left) * (W / rect.width)), y = Math.floor((e.clientY - rect.top) * (H / rect.height));
-            const [r, g, b] = ctx.getImageData(x, y, 1, 1).data;
-            const hex = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
-            document.getElementById('pmc-color').value = hex;
-            canvas.style.cursor = 'default'; canvas.onclick = null; update();
-        }};
+        initUI();
     })();
     </script>
     <?php
