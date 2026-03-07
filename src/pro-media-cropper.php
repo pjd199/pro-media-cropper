@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Pro Media Cropper
- * Description: Precision cropping for Widescreen, Social Link, Instagram, and Stories with automatic metadata tracking.
- * Version: 3.7.5
+ * Description: Precision cropping for Social Media, YouTube, and Photography with automatic metadata tracking.
+ * Version: 3.7.7
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -26,7 +26,7 @@ add_action('admin_init', function() {
     register_setting('pmc_group', 'pmc_default_provider');
     register_setting('pmc_group', 'pmc_export_width');
     register_setting('pmc_group', 'pmc_export_height');
-    register_setting('pmc_group', 'pmc_default_ratio'); // New Default Ratio Setting
+    register_setting('pmc_group', 'pmc_default_ratio');
 
     if (isset($_POST['pmc_clear_cache']) && check_admin_referer('pmc_clear_cache_action')) {
         $tracker = get_option('pmc_cache_tracker', []);
@@ -60,9 +60,13 @@ function pmc_settings_page_html() {
                         <option value="custom" <?php selected($def_ratio, 'custom'); ?>>Custom Settings (Dimensions below)</option>
                         <option value="16:9" <?php selected($def_ratio, '16:9'); ?>>Widescreen (16:9)</option>
                         <option value="1:1" <?php selected($def_ratio, '1:1'); ?>>Square (1:1)</option>
-                        <option value="4:5" <?php selected($def_ratio, '4:5'); ?>>Social Portrait (4:5)</option>
+                        <option value="4:5" <?php selected($def_ratio, '4:5'); ?>>Instagram/Facebook Portrait (4:5)</option>
                         <option value="1.91:1" <?php selected($def_ratio, '1.91:1'); ?>>Social Landscape (1.91:1)</option>
-                        <option value="9:16" <?php selected($def_ratio, '9:16'); ?>>Stories (9:16)</option>
+                        <option value="9:16" <?php selected($def_ratio, '9:16'); ?>>Stories/Reels (9:16)</option>
+                        <option value="X" <?php selected($def_ratio, 'X'); ?>>X (Twitter) (16:9)</option>
+                        <option value="Pinterest" <?php selected($def_ratio, 'Pinterest'); ?>>Pinterest (2:3)</option>
+                        <option value="YouTube" <?php selected($def_ratio, 'YouTube'); ?>>YouTube Thumbnail (16:9)</option>
+                        <option value="Photo" <?php selected($def_ratio, 'Photo'); ?>>Standard Photo (4x6) (3:2)</option>
                     </select>
                 </td></tr>
                 <tr><th>Custom Dimensions (px)</th><td>
@@ -175,9 +179,13 @@ function pmc_render_page() {
                         <option value="custom" data-w="<?php echo get_option('pmc_export_width','1920'); ?>" data-h="<?php echo get_option('pmc_export_height','1080'); ?>">Custom Settings (<?php echo get_option('pmc_export_width','1920').'x'.get_option('pmc_export_height','1080'); ?>)</option>
                         <option value="16:9" data-w="1920" data-h="1080">Widescreen (16:9)</option>
                         <option value="1:1" data-w="1080" data-h="1080">Square (1:1)</option>
-                        <option value="4:5" data-w="1080" data-h="1350">Social Portrait (4:5)</option>
+                        <option value="4:5" data-w="1080" data-h="1350">Instagram/Facebook Portrait (4:5)</option>
                         <option value="1.91:1" data-w="1200" data-h="630">Social Landscape (1.91:1)</option>
-                        <option value="9:16" data-w="1080" data-h="1920">Stories (9:16)</option>
+                        <option value="9:16" data-w="1080" data-h="1920">Stories/Reels (9:16)</option>
+                        <option value="X" data-w="1600" data-h="900">X (Twitter) (16:9)</option>
+                        <option value="Pinterest" data-w="1000" data-h="1500">Pinterest (2:3)</option>
+                        <option value="YouTube" data-w="1920" data-h="1080">YouTube Thumbnail (16:9)</option>
+                        <option value="Photo" data-w="1800" data-h="1200">Standard Photo (4x6) (3:2)</option>
                     </select>
                 </div>
                 <div class="pmc-row"><label>Crop Mode</label>
@@ -209,7 +217,6 @@ function pmc_render_page() {
             let cropper = null, isLocked = true, currentMeta = {}, stockPage = 1, stockLoading = false, currentBlobUrl = null;
             let exportW, exportH;
 
-            // Apply Default Preset from Settings
             presetSel.value = pmc_vars.default_ratio;
 
             function updateCanvasSize() {
@@ -219,7 +226,7 @@ function pmc_render_page() {
                 document.getElementById('pmc-preview-label').textContent = `Export Preview (${exportW}x${exportH})`;
                 if (cropper) initCropper();
             }
-            updateCanvasSize(); // Initial call
+            updateCanvasSize();
 
             async function renderPdf(file) {
                 const pdfjsLib = window['pdfjs-dist/build/pdf'];
@@ -356,7 +363,7 @@ function pmc_render_page() {
 }
 
 /* -------------------------------------------------------------------------
-   3. AJAX SEARCH LOGIC (Same as 3.7.4)
+   3. AJAX SEARCH LOGIC
    ------------------------------------------------------------------------- */
 add_action('wp_ajax_pmc_search_stock', function() {
     $q = sanitize_text_field($_POST['query']); $p = sanitize_text_field($_POST['provider']); $pg = intval($_POST['page']);
