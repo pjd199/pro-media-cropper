@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Pro Media Cropper
- * Description: Upload, search, or browse your library to crop images into perfectly sized social and widescreen formats.
- * Version: 3.7.3
+ * Description: Precision cropping for Widescreen, Social Link, Instagram, and Stories with automatic metadata tracking.
+ * Version: 3.7.5
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -11,21 +11,13 @@
 if (!defined('ABSPATH')) exit;
 
 /* -------------------------------------------------------------------------
-   1. SETTINGS, MENU & CACHE LOGIC
+   1. SETTINGS & DEFAULT LOGIC
    ------------------------------------------------------------------------- */
 
 add_action('admin_menu', function() {
     add_media_page('Pro Media Cropper', 'Pro Media Cropper', 'publish_posts', 'pro-media-cropper', 'pmc_render_page');
     add_options_page('Pro Media Cropper Settings', 'Pro Media Cropper', 'manage_options', 'pmc-settings', 'pmc_settings_page_html');
 });
-
-add_filter('admin_title', function($admin_title, $title) {
-    $screen = get_current_screen();
-    if ($screen && in_array($screen->id, ['media_page_pro-media-cropper', 'settings_page_pmc-settings'])) {
-        return $title . ' &lsaquo; ' . get_bloginfo('name');
-    }
-    return $admin_title;
-}, 10, 2);
 
 add_action('admin_init', function() {
     register_setting('pmc_group', 'pmc_pixabay_key');
@@ -34,35 +26,21 @@ add_action('admin_init', function() {
     register_setting('pmc_group', 'pmc_default_provider');
     register_setting('pmc_group', 'pmc_export_width');
     register_setting('pmc_group', 'pmc_export_height');
+    register_setting('pmc_group', 'pmc_default_ratio'); // New Default Ratio Setting
 
     if (isset($_POST['pmc_clear_cache']) && check_admin_referer('pmc_clear_cache_action')) {
         $tracker = get_option('pmc_cache_tracker', []);
-        if (is_array($tracker)) {
-            foreach($tracker as $key) { delete_transient($key); }
-        }
+        if (is_array($tracker)) { foreach($tracker as $key) { delete_transient($key); } }
         delete_option('pmc_cache_tracker');
         add_settings_error('pmc_messages', 'pmc_message', 'Search cache cleared!', 'updated');
     }
 });
 
-add_action('wp_ajax_pmc_test_api', function() {
-    $provider = sanitize_text_field($_POST['provider']);
-    $key = sanitize_text_field($_POST['key']);
-    if (empty($key)) wp_send_json_error('Key is empty');
-    $url = ''; $args = [];
-    if ($provider === 'pixabay') $url = "https://pixabay.com/api/?key=$key&q=test&per_page=3";
-    elseif ($provider === 'unsplash') $url = "https://api.unsplash.com/photos?client_id=$key&per_page=1";
-    elseif ($provider === 'pexels') { $url = "https://api.pexels.com/v1/curated?per_page=1"; $args = ['headers' => ['Authorization' => $key]]; }
-    $resp = wp_remote_get($url, $args);
-    $code = wp_remote_retrieve_response_code($resp);
-    ($code === 200) ? wp_send_json_success('Connection Successful!') : wp_send_json_error('Failed (Code: ' . $code . ')');
-});
-
 function pmc_settings_page_html() {
-    $default_provider = get_option('pmc_default_provider', 'pixabay');
-    $tracker = get_option('pmc_cache_tracker', []);
-    $count = is_array($tracker) ? count($tracker) : 0;
-    $licenses = ['pixabay' => 'https://pixabay.com/service/license/', 'unsplash' => 'https://unsplash.com/license', 'pexels' => 'https://www.pexels.com/license/'];
+    $def_provider = get_option('pmc_default_provider', 'pixabay');
+    $def_ratio    = get_option('pmc_default_ratio', '16:9');
+    $tracker      = get_option('pmc_cache_tracker', []);
+    $count        = is_array($tracker) ? count($tracker) : 0;
     ?>
     <div class="wrap">
         <h1>Pro Media Cropper Settings</h1>
@@ -72,20 +50,30 @@ function pmc_settings_page_html() {
             <table class="form-table">
                 <tr><th>Default Search Engine</th><td>
                     <select name="pmc_default_provider">
-                        <option value="pixabay" <?php selected($default_provider, 'pixabay'); ?>>Pixabay</option>
-                        <option value="unsplash" <?php selected($default_provider, 'unsplash'); ?>>Unsplash</option>
-                        <option value="pexels" <?php selected($default_provider, 'pexels'); ?>>Pexels</option>
+                        <option value="pixabay" <?php selected($def_provider, 'pixabay'); ?>>Pixabay</option>
+                        <option value="unsplash" <?php selected($def_provider, 'unsplash'); ?>>Unsplash</option>
+                        <option value="pexels" <?php selected($def_provider, 'pexels'); ?>>Pexels</option>
                     </select>
                 </td></tr>
-                <tr><th>Default Export Dimensions (px)</th><td>
+                <tr><th>Default Aspect Ratio</th><td>
+                    <select name="pmc_default_ratio">
+                        <option value="custom" <?php selected($def_ratio, 'custom'); ?>>Custom Settings (Dimensions below)</option>
+                        <option value="16:9" <?php selected($def_ratio, '16:9'); ?>>Widescreen (16:9)</option>
+                        <option value="1:1" <?php selected($def_ratio, '1:1'); ?>>Square (1:1)</option>
+                        <option value="4:5" <?php selected($def_ratio, '4:5'); ?>>Social Portrait (4:5)</option>
+                        <option value="1.91:1" <?php selected($def_ratio, '1.91:1'); ?>>Social Landscape (1.91:1)</option>
+                        <option value="9:16" <?php selected($def_ratio, '9:16'); ?>>Stories (9:16)</option>
+                    </select>
+                </td></tr>
+                <tr><th>Custom Dimensions (px)</th><td>
                     <input type="number" name="pmc_export_width" value="<?php echo esc_attr(get_option('pmc_export_width', '1920')); ?>" class="small-text"> x 
                     <input type="number" name="pmc_export_height" value="<?php echo esc_attr(get_option('pmc_export_height', '1080')); ?>" class="small-text">
+                    <p class="description">Used when "Custom Settings" is selected above.</p>
                 </td></tr>
                 <?php foreach(['pixabay' => 'Pixabay', 'unsplash' => 'Unsplash', 'pexels' => 'Pexels'] as $slug => $label): ?>
                 <tr><th><?php echo $label; ?> Key</th><td>
                     <input type="text" id="pmc_<?php echo $slug; ?>_key" name="pmc_<?php echo $slug; ?>_key" value="<?php echo esc_attr(get_option('pmc_'.$slug.'_key')); ?>" class="regular-text">
                     <button type="button" class="button pmc-test-btn" data-provider="<?php echo $slug; ?>">Test API</button>
-                    <p class="description"><a href="<?php echo $licenses[$slug]; ?>" target="_blank" rel="noopener noreferrer">View <?php echo $label; ?> License Terms &raquo;</a></p>
                 </td></tr>
                 <?php endforeach; ?>
             </table>
@@ -117,34 +105,8 @@ function pmc_settings_page_html() {
 }
 
 /* -------------------------------------------------------------------------
-   2. AJAX SEARCH & UI RENDERING
+   2. UI & CROPPER LOGIC
    ------------------------------------------------------------------------- */
-
-add_action('wp_ajax_pmc_search_stock', function() {
-    $q = sanitize_text_field($_POST['query']); $p = sanitize_text_field($_POST['provider']); $pg = intval($_POST['page']);
-    $cache_key = 'pmc_v373_' . md5($p . '_' . $q . '_' . $pg);
-    if ($cached = get_transient($cache_key)) wp_send_json_success($cached);
-    $results = []; $key = get_option('pmc_'.$p.'_key');
-    if ($p === 'pixabay') {
-        $resp = wp_remote_get("https://pixabay.com/api/?key=$key&q=".urlencode($q)."&page=$pg&per_page=20");
-        $data = json_decode(wp_remote_retrieve_body($resp), true);
-        foreach (($data['hits'] ?? []) as $i) { $results[] = ['thumb' => $i['previewURL'], 'full' => $i['largeImageURL'], 'author' => $i['user'], 'source' => 'Pixabay', 'desc' => $i['tags'], 'link' => $i['pageURL']]; }
-    } elseif ($p === 'unsplash') {
-        $resp = wp_remote_get("https://api.unsplash.com/search/photos?query=".urlencode($q)."&client_id=$key&page=$pg&per_page=20");
-        $data = json_decode(wp_remote_retrieve_body($resp), true);
-        foreach (($data['results'] ?? []) as $i) { $results[] = ['thumb' => $i['urls']['thumb'], 'full' => $i['urls']['regular'], 'author' => $i['user']['name'], 'source' => 'Unsplash', 'desc' => $i['alt_description'] ?? 'Unsplash Photo', 'link' => $i['links']['html']]; }
-    } elseif ($p === 'pexels') {
-        $resp = wp_remote_get("https://api.pexels.com/v1/search?query=".urlencode($q)."&page=$pg&per_page=20", ['headers'=>['Authorization'=>$key]]);
-        $data = json_decode(wp_remote_retrieve_body($resp), true);
-        foreach (($data['photos'] ?? []) as $i) { $results[] = ['thumb' => $i['src']['tiny'], 'full' => $i['src']['large2x'], 'author' => $i['photographer'], 'source' => 'Pexels', 'desc' => $i['alt'] ?? 'Pexels Photo', 'link' => $i['url']]; }
-    }
-    if (!empty($results)) {
-        set_transient($cache_key, $results, DAY_IN_SECONDS);
-        $t = get_option('pmc_cache_tracker', []);
-        if (!in_array($cache_key, $t)) { $t[] = $cache_key; update_option('pmc_cache_tracker', $t, false); }
-    }
-    wp_send_json_success($results);
-});
 
 add_action('admin_enqueue_scripts', function($hook) {
     if ($hook !== 'media_page_pro-media-cropper') return;
@@ -156,14 +118,13 @@ add_action('admin_enqueue_scripts', function($hook) {
         'nonce' => wp_create_nonce('wp_rest'), 
         'ajaxurl' => admin_url('admin-ajax.php'), 
         'root' => esc_url_raw(rest_url()),
-        'export_width' => get_option('pmc_export_width', '1920'),
-        'export_height' => get_option('pmc_export_height', '1080')
+        'default_ratio' => get_option('pmc_default_ratio', '16:9'),
+        'custom_w' => get_option('pmc_export_width', '1920'),
+        'custom_h' => get_option('pmc_export_height', '1080')
     ]);
 });
 
 function pmc_render_page() {
-    $w = get_option('pmc_export_width', '1920');
-    $h = get_option('pmc_export_height', '1080');
     ?>
     <style>
         .pmc-container { display: flex; gap: 20px; margin-top: 10px; height: calc(100vh - 120px); min-height: 550px; }
@@ -207,17 +168,16 @@ function pmc_render_page() {
             </div>
             <div class="pmc-sidebar">
                 <div id="pmc-status-container"></div>
-                <label id="pmc-preview-label">Export Preview (<?php echo $w.'x'.$h; ?>)</label>
+                <label id="pmc-preview-label">Export Preview</label>
                 <div class="pmc-preview-box"><canvas id="pmc-canvas"></canvas></div>
                 <div class="pmc-row"><label>Aspect Ratio Preset</label>
                     <select id="pmc-ratio-preset" style="width:100%;">
-                        <option value="default" data-w="<?php echo $w; ?>" data-h="<?php echo $h; ?>">Default (Settings)</option>
+                        <option value="custom" data-w="<?php echo get_option('pmc_export_width','1920'); ?>" data-h="<?php echo get_option('pmc_export_height','1080'); ?>">Custom Settings (<?php echo get_option('pmc_export_width','1920').'x'.get_option('pmc_export_height','1080'); ?>)</option>
                         <option value="16:9" data-w="1920" data-h="1080">Widescreen (16:9)</option>
-                        <option value="1.91:1" data-w="1200" data-h="630">Facebook Link (1.91:1)</option>
-                        <option value="4:3" data-w="1200" data-h="900">Facebook Post (4:3)</option>
-                        <option value="4:5" data-w="1080" data-h="1350">Instagram Post (4:5)</option>
                         <option value="1:1" data-w="1080" data-h="1080">Square (1:1)</option>
-                        <option value="9:16" data-w="1080" data-h="1920">TikTok / Reel (9:16)</option>
+                        <option value="4:5" data-w="1080" data-h="1350">Social Portrait (4:5)</option>
+                        <option value="1.91:1" data-w="1200" data-h="630">Social Landscape (1.91:1)</option>
+                        <option value="9:16" data-w="1080" data-h="1920">Stories (9:16)</option>
                     </select>
                 </div>
                 <div class="pmc-row"><label>Crop Mode</label>
@@ -237,17 +197,7 @@ function pmc_render_page() {
         </div>
     </div>
 
-    <div id="pmc-search-modal">
-        <div class="pmc-modal-inner">
-            <div style="display:flex; gap:10px;">
-                <select id="pmc-stock-provider"><option value="pixabay">Pixabay</option><option value="unsplash">Unsplash</option><option value="pexels">Pexels</option></select>
-                <input type="text" id="pmc-stock-query" style="flex:1" placeholder="Search keywords...">
-                <button class="button button-primary" onclick="window.pmcStartNewSearch()">Search</button>
-                <button class="button" onclick="document.getElementById('pmc-search-modal').style.display='none'">Close</button>
-            </div>
-            <div id="pmc-stock-results" class="pmc-stock-grid"><div id="pmc-stock-load-sentinel">Type and press Enter</div></div>
-        </div>
-    </div>
+    <div id="pmc-search-modal"><div class="pmc-modal-inner"><div style="display:flex; gap:10px;"><select id="pmc-stock-provider"><option value="pixabay">Pixabay</option><option value="unsplash">Unsplash</option><option value="pexels">Pexels</option></select><input type="text" id="pmc-stock-query" style="flex:1" placeholder="Search keywords..."><button class="button button-primary" onclick="window.pmcStartNewSearch()">Search</button><button class="button" onclick="document.getElementById('pmc-search-modal').style.display='none'">Close</button></div><div id="pmc-stock-results" class="pmc-stock-grid"><div id="pmc-stock-load-sentinel">Type and press Enter</div></div></div></div>
 
     <script>
     (function() {
@@ -255,12 +205,22 @@ function pmc_render_page() {
             if (typeof pmc_vars === 'undefined' || typeof Cropper === 'undefined') { setTimeout(initUI, 50); return; }
             const canvas = document.getElementById('pmc-canvas'), ctx = canvas.getContext('2d');
             const img = document.getElementById('pmc-image'), loader = document.getElementById('pmc-loading');
-            const filenameInput = document.getElementById('pmc-filename'), statusCont = document.getElementById('pmc-status-container'), attrLine = document.getElementById('pmc-attribution');
+            const filenameInput = document.getElementById('pmc-filename'), statusCont = document.getElementById('pmc-status-container'), attrLine = document.getElementById('pmc-attribution'), presetSel = document.getElementById('pmc-ratio-preset');
             let cropper = null, isLocked = true, currentMeta = {}, stockPage = 1, stockLoading = false, currentBlobUrl = null;
-            let exportW = parseInt(pmc_vars.export_width), exportH = parseInt(pmc_vars.export_height);
-            canvas.width = exportW; canvas.height = exportH;
+            let exportW, exportH;
 
-            // RESTORED: PDF Renderer
+            // Apply Default Preset from Settings
+            presetSel.value = pmc_vars.default_ratio;
+
+            function updateCanvasSize() {
+                const opt = presetSel.selectedOptions[0];
+                exportW = parseInt(opt.dataset.w); exportH = parseInt(opt.dataset.h);
+                canvas.width = exportW; canvas.height = exportH;
+                document.getElementById('pmc-preview-label').textContent = `Export Preview (${exportW}x${exportH})`;
+                if (cropper) initCropper();
+            }
+            updateCanvasSize(); // Initial call
+
             async function renderPdf(file) {
                 const pdfjsLib = window['pdfjs-dist/build/pdf'];
                 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -318,7 +278,6 @@ function pmc_render_page() {
                 ctx.drawImage(crop, (exportW - nw)/2, (exportH - nh)/2, nw, nh);
             }
 
-            // RESTORED: File Upload Listener
             document.getElementById('pmc-file-input').onchange = async (e) => {
                 const f = e.target.files[0]; if(!f) return;
                 loader.style.display = 'flex';
@@ -326,7 +285,7 @@ function pmc_render_page() {
                     const url = (f.type === 'application/pdf') ? await renderPdf(f) : URL.createObjectURL(f);
                     loadSource(url, f.name, { display_path: 'Local File: ' + f.name });
                 } catch (err) { alert('Error loading file.'); loader.style.display = 'none'; }
-                e.target.value = ''; // Reset input so same file can be re-selected
+                e.target.value = '';
             };
 
             document.getElementById('pmc-library-btn').onclick = (e) => {
@@ -339,14 +298,7 @@ function pmc_render_page() {
                 frame.open();
             };
 
-            document.getElementById('pmc-ratio-preset').onchange = () => {
-                const opt = document.getElementById('pmc-ratio-preset').selectedOptions[0];
-                exportW = parseInt(opt.dataset.w); exportH = parseInt(opt.dataset.h);
-                canvas.width = exportW; canvas.height = exportH;
-                document.getElementById('pmc-preview-label').textContent = `Export Preview (${exportW}x${exportH})`;
-                if (cropper) initCropper();
-            };
-
+            presetSel.onchange = updateCanvasSize;
             document.getElementById('mode-locked').onclick = function() { isLocked = true; this.classList.add('active'); document.getElementById('mode-pillar').classList.remove('active'); document.getElementById('pillarbox-controls').style.display='none'; initCropper(); };
             document.getElementById('mode-pillar').onclick = function() { isLocked = false; this.classList.add('active'); document.getElementById('mode-locked').classList.remove('active'); document.getElementById('pillarbox-controls').style.display='block'; initCropper(); };
             document.getElementById('pmc-mode').onchange = function() { document.getElementById('blur-wrap').style.display = (this.value==='echo'?'block':'none'); document.getElementById('color-picker-wrap').style.display = (this.value==='custom'?'block':'none'); update(); };
@@ -396,20 +348,38 @@ function pmc_render_page() {
                 });
             }
             document.getElementById('pmc-stock-query').onkeypress = (e) => { if(e.key==='Enter') window.pmcStartNewSearch(); };
-            
-            document.getElementById('pmc-eyedropper-btn').onclick = () => { 
-                canvas.style.cursor = 'crosshair'; 
-                canvas.onclick = (e) => {
-                    const rect = canvas.getBoundingClientRect();
-                    const x = Math.floor((e.clientX - rect.left) * (exportW / rect.width)), y = Math.floor((e.clientY - rect.top) * (exportH / rect.height));
-                    const [r, g, b] = ctx.getImageData(x, y, 1, 1).data;
-                    document.getElementById('pmc-color').value = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
-                    canvas.style.cursor = 'default'; canvas.onclick = null; update();
-                }
-            };
         };
         initUI();
     })();
     </script>
     <?php
 }
+
+/* -------------------------------------------------------------------------
+   3. AJAX SEARCH LOGIC (Same as 3.7.4)
+   ------------------------------------------------------------------------- */
+add_action('wp_ajax_pmc_search_stock', function() {
+    $q = sanitize_text_field($_POST['query']); $p = sanitize_text_field($_POST['provider']); $pg = intval($_POST['page']);
+    $cache_key = 'pmc_v375_' . md5($p . '_' . $q . '_' . $pg);
+    if ($cached = get_transient($cache_key)) wp_send_json_success($cached);
+    $results = []; $key = get_option('pmc_'.$p.'_key');
+    if ($p === 'pixabay') {
+        $resp = wp_remote_get("https://pixabay.com/api/?key=$key&q=".urlencode($q)."&page=$pg&per_page=20");
+        $data = json_decode(wp_remote_retrieve_body($resp), true);
+        foreach (($data['hits'] ?? []) as $i) { $results[] = ['thumb' => $i['previewURL'], 'full' => $i['largeImageURL'], 'author' => $i['user'], 'source' => 'Pixabay', 'desc' => $i['tags'], 'link' => $i['pageURL']]; }
+    } elseif ($p === 'unsplash') {
+        $resp = wp_remote_get("https://api.unsplash.com/search/photos?query=".urlencode($q)."&client_id=$key&page=$pg&per_page=20");
+        $data = json_decode(wp_remote_retrieve_body($resp), true);
+        foreach (($data['results'] ?? []) as $i) { $results[] = ['thumb' => $i['urls']['thumb'], 'full' => $i['urls']['regular'], 'author' => $i['user']['name'], 'source' => 'Unsplash', 'desc' => $i['alt_description'] ?? 'Unsplash Photo', 'link' => $i['links']['html']]; }
+    } elseif ($p === 'pexels') {
+        $resp = wp_remote_get("https://api.pexels.com/v1/search?query=".urlencode($q)."&page=$pg&per_page=20", ['headers'=>['Authorization'=>$key]]);
+        $data = json_decode(wp_remote_retrieve_body($resp), true);
+        foreach (($data['photos'] ?? []) as $i) { $results[] = ['thumb' => $i['src']['tiny'], 'full' => $i['src']['large2x'], 'author' => $i['photographer'], 'source' => 'Pexels', 'desc' => $i['alt'] ?? 'Pexels Photo', 'link' => $i['url']]; }
+    }
+    if (!empty($results)) {
+        set_transient($cache_key, $results, DAY_IN_SECONDS);
+        $t = get_option('pmc_cache_tracker', []);
+        if (!in_array($cache_key, $t)) { $t[] = $cache_key; update_option('pmc_cache_tracker', $t, false); }
+    }
+    wp_send_json_success($results);
+});
