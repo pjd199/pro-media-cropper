@@ -2,8 +2,6 @@
 
 **Pro Media Cropper** is a high-precision image editing and cropping tool built natively for WordPress. It is designed for social media managers, photographers, and content creators who need to generate perfectly sized assets for YouTube, Instagram, X (Twitter), and Pinterest while maintaining automatic metadata and attribution tracking.
 
-
-
 ---
 
 ## 🚀 Key Features
@@ -19,10 +17,9 @@
 ---
 
 ## 🛠 Installation
-
-1.  Download the repository as a `.zip` file.
+1. Download the pro-media-cropper zip file from the asset list of the **[latest release](https://github.com/pjd199/pro-media-cropper/releases)** on GitHub.
 2.  In your WordPress Admin, go to **Plugins > Add New > Upload Plugin**.
-3.  Upload the `pro-media-cropper.zip` file and click **Install Now**.
+3.  Upload the `pro-media-cropper` zip file and click **Install Now**.
 4.  **Activate** the plugin.
 5.  Access the tool via **Media > Pro Media Cropper**.
 
