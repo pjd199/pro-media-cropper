@@ -9,7 +9,8 @@
 ## 🚀 Key Features
 
 * **Header-Integrated Actions:** Quickly upload local files, browse the WordPress Media Library, or search stock image databases directly from the page header.
-* **Intelligent Pillarboxing:** * **Echo Blur:** Automatically creates a blurred, darkened background using the source image for vertical content.
+* **Intelligent Pillarboxing:**
+    * **Echo Blur:** Automatically creates a blurred, darkened background using the source image for vertical content.
     * **Custom Colors:** Use a built-in eyedropper to pick colors directly from your preview for a seamless background.
 * **Vector & Document Support:** Native support for rendering and cropping **SVG** and **PDF** files via `PDF.js`.
 * **Metadata Tracking:** Automatically carries over author and license information from stock providers into the WordPress Media Library description.
