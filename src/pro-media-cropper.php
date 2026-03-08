@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Pro Media Cropper
- * Description: Precision cropping for Social Media, YouTube, and Photography with automatic metadata tracking.
- * Version: 3.9.0
+ * Description: Precision cropping tool with advanced crop options and stock image search function.
+ * Version: 3.9.1
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -97,6 +97,11 @@ function pmc_settings_page_html()
         "unsplash" => "https://unsplash.com/license",
         "pexels" => "https://www.pexels.com/license/",
     ];
+    $provider_help = [
+        "pixabay" => "https://pixabay.com/api/docs/",
+        "unsplash" => "https://unsplash.com/developers/",
+        "pexels" => "https://www.pexels.com/api/",
+    ];
     ?>
     <div class="wrap">
         <h1>Pro Media Cropper Settings</h1>
@@ -174,7 +179,10 @@ function pmc_settings_page_html()
                         <p class="description">
                             <a href="<?php echo $provider_links[
                                 $slug
-                            ]; ?>" target="_blank" style="text-decoration:none;">View <?php echo $label; ?> License</a>
+                            ]; ?>" target="_blank" style="text-decoration:none;">View <?php echo $label; ?> License</a> | 
+                            <a href="<?php echo $provider_help[
+                                $slug
+                            ]; ?>" target="_blank" style="text-decoration:none;">Get help with <?php echo $label; ?> API</a>
                         </p>
                     </td>
                 </tr>
@@ -216,10 +224,40 @@ function pmc_settings_page_html()
 
             <div class="card" style="flex: 1; max-width: 450px; padding: 15px; margin: 0;">
                 <h3>Plugin Information</h3>
-                <p><strong>Version:</strong> 3.8.3</p>
-                <p><strong>License:</strong> MIT</p>
-                <p><strong>Support:</strong> <a href="https://github.com/pjd199/pro-media-cropper" target="_blank">GitHub Repository</a></p>
-                <p class="description">Developed by Pete Dibdin for high-precision media workflow.</p>
+                <?php
+                if (!function_exists("get_plugin_data")) {
+                    require_once ABSPATH . "wp-admin/includes/plugin.php";
+                }
+
+                // Explicitly define the extra headers we want to grab
+                $extra_headers = [
+                    "License" => "License",
+                    "GitHubPluginURI" => "GitHub Plugin URI",
+                ];
+
+                // Pass the extra headers as the third argument
+                $plugin_data = get_plugin_data(__FILE__, false, false);
+
+                // For custom headers, we use get_file_data for more reliable extraction
+                $all_data = get_file_data(__FILE__, [
+                    "Version" => "Version",
+                    "License" => "License",
+                    "GitHub" => "GitHub Plugin URI",
+                    "Desc" => "Description",
+                ]);
+                ?>
+                <p><strong>Version:</strong> <?php echo esc_html(
+                    $all_data["Version"]
+                ); ?></p>
+                <p><strong>License:</strong> <?php echo esc_html(
+                    $all_data["License"]
+                ); ?></p>
+                <p><strong>Support:</strong> <a href="<?php echo esc_url(
+                    $all_data["GitHub"]
+                ); ?>" target="_blank">GitHub Repository</a></p>
+                <p class="description"><?php echo esc_html(
+                    $all_data["Desc"]
+                ); ?></p>
             </div>
         </div>
     </div>
