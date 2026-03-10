@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Precision cropping tool with advanced crop options and stock image search function.
- * Version: 3.9.4
+ * Version: 3.9.5
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -229,7 +229,7 @@ function pmc_settings_page_html()
         <div style="display: flex; gap: 30px; margin-top: 20px;">
             <div class="card" style="flex: 1; max-width: 450px; padding: 15px; margin: 0;">
                 <h3>Search Cache Management</h3>
-                <p>The plugin caches stock search results for 24 hours to improve performance.</p>
+                <p>The plugin caches stock image search results for 24 hours to improve performance.</p>
                 <p><strong>Currently Cached:</strong> <?php echo $count; ?> search result pages.</p>
                 <form method="post" action="">
                     <?php wp_nonce_field("pmc_clear_cache_action"); ?>
