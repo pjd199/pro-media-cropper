@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Precision cropping tool with advanced crop options and stock image search function.
- * Version: 3.9.1
+ * Version: 3.9.2
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
