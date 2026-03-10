@@ -1,6 +1,9 @@
 name: Release WordPress Plugin
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -21,7 +24,7 @@ jobs:
         id: get_version
         run: |
           # Look for version in src/[plugin-slug].php
-          VERSION=$(grep -m 1 "Version:" src/${{ env.PLUGIN_SLUG }}.php | awk '{print $NF}' | tr -d '\r')
+          VERSION=$(grep -m 1 "Version:" ${{ env.PLUGIN_SLUG }}.php | awk '{print $NF}' | tr -d '\r')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
@@ -43,8 +46,8 @@ jobs:
           # Create a folder named after the plugin-slug
           mkdir -p ${{ env.PLUGIN_SLUG }}
           
-          # Copy all source files into that folder
-          cp -r src/* ${{ env.PLUGIN_SLUG }}/
+          # Copy source file into that folder
+          cp -r ${{ env.PLUGIN_SLUG }}.php ${{ env.PLUGIN_SLUG }}/
           
           # Include root README if available
           if [ -f README.md ]; then cp README.md ${{ env.PLUGIN_SLUG }}/; fi
