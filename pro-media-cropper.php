@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Precision cropping tool with advanced crop options and stock image search function.
- * Version: 3.9.3
+ * Version: 3.9.4
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -90,7 +90,25 @@ function pmc_settings_page_html()
     $def_provider = get_option("pmc_default_provider", "pixabay");
     $def_ratio = get_option("pmc_default_ratio", "16:9");
     $tracker = get_option("pmc_cache_tracker", []);
-    $count = is_array($tracker) ? count($tracker) : 0;
+    $actually_cached = 0;
+    $valid_keys = [];
+    
+    if (is_array($tracker)) {
+        foreach ($tracker as $key) {
+            // With Memcached, this call is extremely fast (micro-seconds)
+            if (get_transient($key)) {
+                $valid_keys[] = $key;
+                $actually_cached++;
+            }
+        }
+    }
+    
+    // Sync the database tracker with the reality of Memcached
+    if (count($tracker) !== count($valid_keys)) {
+        update_option("pmc_cache_tracker", $valid_keys);
+    }
+    
+    $count = $actually_cached;
 
     $provider_links = [
         "pixabay" => "https://pixabay.com/service/license/",
