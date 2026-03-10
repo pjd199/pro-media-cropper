@@ -415,6 +415,15 @@ function pmc_render_page()
             width: 20px;
             height: 20px;
         }
+
+        #pmc-stock-load-sentinel {
+            grid-column: 1 / -1; /* Stretch across the whole grid row */
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            clear: both;
+        }
     </style>
 
     <div class="wrap" style="overflow: hidden;">
