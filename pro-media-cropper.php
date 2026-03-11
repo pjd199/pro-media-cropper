@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Precision cropping tool with advanced crop options and stock image search function.
- * Version: 3.9.10
+ * Version: 3.9.11
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -645,10 +645,16 @@ function pmc_render_page()
 
             async function handleImportedData(data) {
                 if (data instanceof File || data instanceof Blob) {
-                    const url = URL.createObjectURL(data);
-                    loadSource(url, "pasted-image-" + Date.now(), { isBlob: true });
-                } else if (typeof data === 'string' && data.startsWith('http')) {
-                    loadSource(data, "pasted-url", { display_path: 'Pasted URL' });
+                    // Create a local URL for the blob
+                    const blobUrl = URL.createObjectURL(data);
+                    // We pass isBlob: true so loadSource knows not to use the proxy
+                    loadSource(blobUrl, "pasted-image-" + Date.now(), { isBlob: true });
+                } else if (typeof data === 'string') {
+                    const trimmed = data.trim();
+                    if (trimmed.startsWith('http')) {
+                        // This is a URL, loadSource will automatically proxy it if needed
+                        loadSource(trimmed, "pasted-url-" + Date.now(), { display_path: 'Pasted URL' });
+                    }
                 }
             }
 
@@ -681,12 +687,23 @@ function pmc_render_page()
             };
 
             window.addEventListener('paste', (e) => {
+                // If the user is typing in the filename input, don't trigger the image loader
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                for (const item of items) {
-                    if (item.type.indexOf("image") !== -1) {
-                        handleImportedData(item.getAsFile());
-                    } else if (item.type === "text/plain") {
-                        handleImportedData(item.getAsString);
+                
+                for (let i = 0; i < items.length; i++) {
+                    // Handle Image Blobs (Screenshots / Copied Images)
+                    if (items[i].type.indexOf("image") !== -1) {
+                        const blob = items[i].getAsFile();
+                        handleImportedData(blob);
+                        e.preventDefault();
+                    } 
+                    // Handle Text (Pasted URL strings)
+                    else if (items[i].type === "text/plain") {
+                        items[i].getAsString((text) => {
+                            handleImportedData(text);
+                        });
                     }
                 }
             });
