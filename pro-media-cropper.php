@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Precision cropping tool with advanced crop options and stock image search function.
- * Version: 3.9.12
+ * Version: 3.9.13
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -567,44 +567,59 @@ function pmc_render_page()
                 if (cropper) { cropper.destroy(); cropper = null; }
                 if (currentBlobUrl && currentBlobUrl.startsWith('blob:')) URL.revokeObjectURL(currentBlobUrl);
                 currentBlobUrl = null; img.src = ''; img.classList.remove('loaded');
-                filenameInput.value = ''; currentMeta = {}; attrLine.innerHTML = ''; ctx.clearRect(0, 0, exportW, exportH);
+                currentMeta = {}; attrLine.innerHTML = ''; ctx.clearRect(0, 0, exportW, exportH);
                 document.getElementById('pmc-save-btn').disabled = true;
                 statusCont.innerHTML = '';
             }
 
             function loadSource(url, name, meta = {}) {
                 if(!url) return;
-                clearUI();
+                
+                // Clear the old cropper/image but NOT the whole UI yet
+                if (cropper) { cropper.destroy(); cropper = null; }
+                if (currentBlobUrl && currentBlobUrl.startsWith('blob:')) URL.revokeObjectURL(currentBlobUrl);
+                
+                img.src = ''; 
+                img.classList.remove('loaded');
                 loader.style.display = 'flex';
-            
+                
+                // Set the filename: Format the name correctly and inject it into the input
+                const safeName = (name || "image-" + Date.now());
+                filenameInput.value = safeName.toLowerCase().replace(/\.[^/.]+$/, "").replace(/\s+/g, '-');
+                
+                currentMeta = meta;
+                attrLine.innerHTML = meta.display_path || '';
                 let finalUrl = url;
             
-                // If it's a remote URL and not a local blob/data-uri, route through WP Proxy
-                if (!meta.isBlob && url.startsWith('http') && !url.includes(window.location.hostname)) {
-                    // 'ajaxurl' is a global variable usually available in WP Admin
-                    // If not, you may need to define it or use admin-ajax.php path
-                    const proxyBase = typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php';
-                    finalUrl = `${proxyBase}?action=proxy_image&url=${encodeURIComponent(url)}`;
-                }
+                // Logic to determine if we need the proxy (to avoid "Tainted Canvas")
+                const isBlob = meta.isBlob || url.startsWith('blob:') || url.startsWith('data:');
+                const isExternal = url.startsWith('http') && !url.includes(window.location.hostname);
             
-                // Set the image source
-                img.src = finalUrl;
-            
-                // For the proxy, we DON'T need crossOrigin because the proxy 
-                // provides the 'Access-Control-Allow-Origin: *' header
-                if (finalUrl.includes('action=proxy_image')) {
+                if (isBlob) {
                     img.removeAttribute('crossOrigin');
-                } else if (!meta.isBlob) {
+                    finalUrl = url;
+                } else if (isExternal) {
+                    // Use the WP Proxy to allow saving/exporting
+                    const proxyBase = pmc_vars.ajaxurl;
+                    finalUrl = `${proxyBase}?action=pmc_proxy_image&url=${encodeURIComponent(url)}`;
+                    img.removeAttribute('crossOrigin'); 
+                } else {
                     img.crossOrigin = "anonymous";
+                    finalUrl = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
                 }
+            
+                img.src = finalUrl;
             
                 img.onload = () => {
                     initCropper();
+                    img.classList.add('loaded');
+                    // RE-ENABLE THE SAVE BUTTON
+                    document.getElementById('pmc-save-btn').disabled = false;
                     loader.style.display = 'none';
                 };
             
                 img.onerror = () => {
-                    alert("Unable to paste image URL. Please download the image from the orginal site and upload here.");
+                    alert("Failed to load image. The source may be blocking external requests.");
                     loader.style.display = 'none';
                 };
             }
@@ -885,7 +900,7 @@ add_action("wp_ajax_pmc_search_stock", function () {
 });
 
 // Register the proxy action for logged-in users
-add_action('wp_ajax_proxy_image', 'secure_image_proxy');
+add_action('wp_ajax_pmc_proxy_image', 'secure_image_proxy');
 
 function secure_image_proxy() {
     // 1. Security Check: Only allow authorized users (e.g., editors/admins)
