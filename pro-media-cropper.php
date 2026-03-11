@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Precision cropping tool with advanced crop options and stock image search function.
- * Version: 3.9.9
+ * Version: 3.9.10
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -573,34 +573,42 @@ function pmc_render_page()
             }
 
             function loadSource(url, name, meta = {}) {
-                if(!url) return; 
-                clearUI(); 
-                currentBlobUrl = url; 
+                if(!url) return;
+                clearUI();
                 loader.style.display = 'flex';
-                filenameInput.value = name.toLowerCase().replace(/\.[^/.]+$/, "").replace(/\s+/g, '-');
-                if (meta.author && meta.source) {
-                    meta.description = `Photo by ${meta.author} via ${meta.source}. Original: ${meta.link || 'N/A'}`;
-                    attrLine.innerHTML = `Stock photo by ${meta.author} on <a href="${meta.link}" target="_blank">${meta.source}</a>`;
-                } else if (meta.display_path) {
-                    attrLine.textContent = meta.display_path;
-                    meta.description = `Source: ${meta.display_path}`;
+            
+                let finalUrl = url;
+            
+                // If it's a remote URL and not a local blob/data-uri, route through WP Proxy
+                if (!meta.isBlob && url.startsWith('http') && !url.includes(window.location.hostname)) {
+                    // 'ajaxurl' is a global variable usually available in WP Admin
+                    // If not, you may need to define it or use admin-ajax.php path
+                    const proxyBase = typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php';
+                    finalUrl = `${proxyBase}?action=proxy_image&url=${encodeURIComponent(url)}`;
                 }
-                currentMeta = meta;
-                // BLOB VS URL HANDLING
-                if (meta.isBlob || url.startsWith('blob:') || url.startsWith('data:')) {
-                    img.removeAttribute('crossOrigin'); // Blobs don't need CORS
-                    img.src = url; // Don't add timestamps to blobs
-                } else {
-                    img.crossOrigin = "anonymous"; 
-                    img.src = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
-                }                            
-                img.onload = () => { initCropper(); img.classList.add('loaded'); document.getElementById('pmc-save-btn').disabled = false; loader.style.display = 'none'; };
+            
+                // Set the image source
+                img.src = finalUrl;
+            
+                // For the proxy, we DON'T need crossOrigin because the proxy 
+                // provides the 'Access-Control-Allow-Origin: *' header
+                if (finalUrl.includes('action=proxy_image')) {
+                    img.removeAttribute('crossOrigin');
+                } else if (!meta.isBlob) {
+                    img.crossOrigin = "anonymous";
+                }
+            
+                img.onload = () => {
+                    initCropper();
+                    loader.style.display = 'none';
+                };
+            
                 img.onerror = () => {
-                    alert("Failed to load image. This is usually due to restrictions on the source website. Try downloading image from the other website and upload here.");
+                    alert("Unable to paste image URL. Please download the image from the orginal site and upload here.");
                     loader.style.display = 'none';
                 };
             }
-
+            
             function initCropper() {
                 if (cropper) cropper.destroy();
                 cropper = new Cropper(img, { aspectRatio: isLocked ? exportW/exportH : NaN, viewMode: 1, crop: update });
@@ -887,3 +895,44 @@ add_action("wp_ajax_pmc_search_stock", function () {
     }
     wp_send_json_success($results);
 });
+
+// Register the proxy action for logged-in users
+add_action('wp_ajax_proxy_image', 'secure_image_proxy');
+
+function secure_image_proxy() {
+    // 1. Security Check: Only allow authorized users (e.g., editors/admins)
+    if (!current_user_can('edit_posts')) {
+        wp_die('Unauthorized');
+    }
+
+    $url = isset($_GET['url']) ? esc_url_raw($_GET['url']) : '';
+
+    if (!$url) {
+        wp_die('No URL provided');
+    }
+
+    // 2. Fetch the image using WordPress's secure HTTP API
+    $response = wp_remote_get($url, array(
+        'timeout'   => 10,
+        'sslverify' => true // Ensure we verify SSL for security
+    ));
+
+    if (is_wp_error($response)) {
+        wp_die('Failed to fetch image');
+    }
+
+    $content_type = wp_remote_retrieve_header($response, 'content-type');
+    $image_data   = wp_remote_retrieve_body($response);
+
+    // 3. Verify it's actually an image
+    if (strpos($content_type, 'image/') === false) {
+        wp_die('Resource is not a valid image');
+    }
+
+    // 4. Output the image with correct headers
+    header("Content-Type: $content_type");
+    header("Access-Control-Allow-Origin: *"); // Allows your JS to read it
+    header("Cache-Control: max-age=86400"); // Cache for 24 hours
+    echo $image_data;
+    exit;
+}
