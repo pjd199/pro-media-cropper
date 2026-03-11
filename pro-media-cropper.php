@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Precision cropping tool with advanced crop options and stock image search function.
- * Version: 3.9.11
+ * Version: 3.9.12
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -643,70 +643,41 @@ function pmc_render_page()
                 e.target.value = '';
             };
 
-            async function handleImportedData(data) {
-                if (data instanceof File || data instanceof Blob) {
-                    // Create a local URL for the blob
-                    const blobUrl = URL.createObjectURL(data);
-                    // We pass isBlob: true so loadSource knows not to use the proxy
-                    loadSource(blobUrl, "pasted-image-" + Date.now(), { isBlob: true });
-                } else if (typeof data === 'string') {
-                    const trimmed = data.trim();
-                    if (trimmed.startsWith('http')) {
-                        // This is a URL, loadSource will automatically proxy it if needed
-                        loadSource(trimmed, "pasted-url-" + Date.now(), { display_path: 'Pasted URL' });
-                    }
-                }
-            }
-
             document.getElementById('pmc-paste-btn').onclick = async () => {
                 try {
+                    // Request clipboard access
                     const clipboardItems = await navigator.clipboard.read();
                     
                     for (const item of clipboardItems) {
-                        // Check for images
-                        const imageTypes = item.types.filter(type => type.startsWith('image/'));
-                        if (imageTypes.length > 0) {
-                            const blob = await item.getType(imageTypes[0]);
-                            handleImportedData(blob);
-                            return; // Exit once we find the image
+                        // Check for Images (Blobs)
+                        const imageType = item.types.find(type => type.startsWith('image/'));
+                        if (imageType) {
+                            const blob = await item.getType(imageType);
+                            const url = URL.createObjectURL(blob);
+                            loadSource(url, "pasted-image-" + Date.now(), { isBlob: true });
+                            return;
                         }
                         
-                        // Check for text/URLs if no image found
+                        // Check for Text (URLs)
                         if (item.types.includes('text/plain')) {
                             const textBlob = await item.getType('text/plain');
                             const text = await textBlob.text();
-                            handleImportedData(text);
-                            return;
+                            const trimmed = text.trim();
+                            if (trimmed.startsWith('http')) {
+                                loadSource(trimmed, "pasted-url-" + Date.now(), { display_path: 'Pasted URL' });
+                                return;
+                            }
                         }
                     }
+                    alert("No image or URL found in clipboard.");
                 } catch (err) {
-                    // Fallback for browsers/contexts where clipboard read is blocked
-                    const fallback = prompt("Paste Image URL:");
-                    if (fallback) handleImportedData(fallback);
-                }
-            };
-
-            window.addEventListener('paste', (e) => {
-                // If the user is typing in the filename input, don't trigger the image loader
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            
-                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                
-                for (let i = 0; i < items.length; i++) {
-                    // Handle Image Blobs (Screenshots / Copied Images)
-                    if (items[i].type.indexOf("image") !== -1) {
-                        const blob = items[i].getAsFile();
-                        handleImportedData(blob);
-                        e.preventDefault();
-                    } 
-                    // Handle Text (Pasted URL strings)
-                    else if (items[i].type === "text/plain") {
-                        items[i].getAsString((text) => {
-                            handleImportedData(text);
-                        });
+                    // Fallback for browsers that block clipboard.read() (like Firefox or non-HTTPS)
+                    const fallback = prompt("Paste Image URL here:");
+                    if (fallback && fallback.trim().startsWith('http')) {
+                        loadSource(fallback.trim(), "pasted-url-" + Date.now(), { display_path: 'Pasted URL' });
                     }
                 }
-            });
+            };
 
             document.getElementById('pmc-library-btn').onclick = (e) => {
                 e.preventDefault();
