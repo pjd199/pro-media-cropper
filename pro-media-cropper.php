@@ -121,6 +121,12 @@ function pmc_settings_page_html()
         "pexels" => "https://www.pexels.com/api/",
     ];
     ?>
+    <style>
+        .anm-wrap ~ .litespeed_icon.notice-success,
+        .litespeed_icon.notice-success { 
+            display: none !important; 
+        }
+    </style>
     <div class="wrap">
         <h1>Pro Media Cropper Settings</h1>
         <?php settings_errors("pmc_messages"); ?>
