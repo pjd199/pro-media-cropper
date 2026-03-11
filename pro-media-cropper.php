@@ -467,7 +467,7 @@ function pmc_render_page()
                 <button id="pmc-stock-btn" class="page-title-action">Search Stock Images</button>
             </div>
     
-            <input type="file" id="pmc-file-input" accept=".pdf,.svg,.jpg,.jpeg,.png,.webp,.bmp" style="display:none;">
+            <input type="file" id="pmc-file-input" accept=".pdf,.svg,.jpg,.jpeg,.png,.webp,.avif,.bmp" style="display:none;">
             <div id="pmc-attribution" class="pmc-attribution-line"></div>
         </div>
         <div class="pmc-container">
