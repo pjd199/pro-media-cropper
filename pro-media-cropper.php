@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Precision cropping tool with advanced crop options and stock image search function.
- * Version: 3.9.8
+ * Version: 3.9.9
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -462,6 +462,7 @@ function pmc_render_page()
             
             <div style="display: flex; gap: 4px; margin-left: 10px;">
                 <button id="pmc-file-btn" class="page-title-action" onclick="document.getElementById('pmc-file-input').click()">Upload File</button>
+                <button id="pmc-paste-btn" class="page-title-action">Paste Image/URL</button>
                 <button id="pmc-library-btn" class="page-title-action">Use Media Library</button>
                 <button id="pmc-stock-btn" class="page-title-action">Search Stock Images</button>
             </div>
@@ -572,7 +573,10 @@ function pmc_render_page()
             }
 
             function loadSource(url, name, meta = {}) {
-                if(!url) return; clearUI(); currentBlobUrl = url; loader.style.display = 'flex';
+                if(!url) return; 
+                clearUI(); 
+                currentBlobUrl = url; 
+                loader.style.display = 'flex';
                 filenameInput.value = name.toLowerCase().replace(/\.[^/.]+$/, "").replace(/\s+/g, '-');
                 if (meta.author && meta.source) {
                     meta.description = `Photo by ${meta.author} via ${meta.source}. Original: ${meta.link || 'N/A'}`;
@@ -582,8 +586,19 @@ function pmc_render_page()
                     meta.description = `Source: ${meta.display_path}`;
                 }
                 currentMeta = meta;
-                img.crossOrigin = "anonymous"; img.src = url.includes('data:') || url.includes('blob:') ? url : url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+                // BLOB VS URL HANDLING
+                if (meta.isBlob || url.startsWith('blob:') || url.startsWith('data:')) {
+                    img.removeAttribute('crossOrigin'); // Blobs don't need CORS
+                    img.src = url; // Don't add timestamps to blobs
+                } else {
+                    img.crossOrigin = "anonymous"; 
+                    img.src = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+                }                            
                 img.onload = () => { initCropper(); img.classList.add('loaded'); document.getElementById('pmc-save-btn').disabled = false; loader.style.display = 'none'; };
+                img.onerror = () => {
+                    alert("Failed to load image. This is usually due to restrictions on the source website. Try downloading image from the other website and upload here.");
+                    loader.style.display = 'none';
+                };
             }
 
             function initCropper() {
@@ -619,6 +634,54 @@ function pmc_render_page()
                 } catch (err) { alert('Error loading file.'); loader.style.display = 'none'; }
                 e.target.value = '';
             };
+
+            async function handleImportedData(data) {
+                if (data instanceof File || data instanceof Blob) {
+                    const url = URL.createObjectURL(data);
+                    loadSource(url, "pasted-image-" + Date.now(), { isBlob: true });
+                } else if (typeof data === 'string' && data.startsWith('http')) {
+                    loadSource(data, "pasted-url", { display_path: 'Pasted URL' });
+                }
+            }
+
+            document.getElementById('pmc-paste-btn').onclick = async () => {
+                try {
+                    const clipboardItems = await navigator.clipboard.read();
+                    
+                    for (const item of clipboardItems) {
+                        // Check for images
+                        const imageTypes = item.types.filter(type => type.startsWith('image/'));
+                        if (imageTypes.length > 0) {
+                            const blob = await item.getType(imageTypes[0]);
+                            handleImportedData(blob);
+                            return; // Exit once we find the image
+                        }
+                        
+                        // Check for text/URLs if no image found
+                        if (item.types.includes('text/plain')) {
+                            const textBlob = await item.getType('text/plain');
+                            const text = await textBlob.text();
+                            handleImportedData(text);
+                            return;
+                        }
+                    }
+                } catch (err) {
+                    // Fallback for browsers/contexts where clipboard read is blocked
+                    const fallback = prompt("Paste Image URL:");
+                    if (fallback) handleImportedData(fallback);
+                }
+            };
+
+            window.addEventListener('paste', (e) => {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                for (const item of items) {
+                    if (item.type.indexOf("image") !== -1) {
+                        handleImportedData(item.getAsFile());
+                    } else if (item.type === "text/plain") {
+                        handleImportedData(item.getAsString);
+                    }
+                }
+            });
 
             document.getElementById('pmc-library-btn').onclick = (e) => {
                 e.preventDefault();
