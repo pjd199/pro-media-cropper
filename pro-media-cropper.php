@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Precision cropping tool with advanced crop options and stock image search function.
- * Version: 3.9.14
+ * Version: 3.9.15
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -72,7 +72,7 @@ add_action("wp_ajax_pmc_test_api", function () {
         $p === "pixabay"
             ? "https://pixabay.com/api/?key=$key&q=test"
             : ($p === "unsplash"
-                ? "https://api.unsplash.com/photos?client_id=$key&per_page=1"
+                ? "https://api.unsplash.com/photos?client_id=$key&per_page=1&content_filter=high"
                 : "https://api.pexels.com/v1/curated?per_page=1");
     $args = $p === "pexels" ? ["headers" => ["Authorization" => $key]] : [];
     $resp = wp_remote_get($url, $args);
@@ -839,7 +839,7 @@ add_action("wp_ajax_pmc_search_stock", function () {
         $resp = wp_remote_get(
             "https://pixabay.com/api/?key=$key&q=" .
                 urlencode($q) .
-                "&page=$pg&per_page=20"
+                "&page=$pg&per_page=20&safesearch=true&image_type=photo"
         );
         $data = json_decode(wp_remote_retrieve_body($resp), true);
         foreach ($data["hits"] ?? [] as $i) {
@@ -856,7 +856,7 @@ add_action("wp_ajax_pmc_search_stock", function () {
         $resp = wp_remote_get(
             "https://api.unsplash.com/search/photos?query=" .
                 urlencode($q) .
-                "&client_id=$key&page=$pg&per_page=20"
+                "&client_id=$key&page=$pg&per_page=20&content_filter=high"
         );
         $data = json_decode(wp_remote_retrieve_body($resp), true);
         foreach ($data["results"] ?? [] as $i) {
