@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Precision cropping tool with advanced crop options and stock image search function.
- * Version: 3.9.15
+ * Version: 3.9.17
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -196,9 +196,15 @@ function pmc_settings_page_html()
                 <tr>
                     <th><?php echo $label; ?> API Key</th>
                     <td>
-                        <input type="text" id="pmc_<?php echo $slug; ?>_key" name="pmc_<?php echo $slug; ?>_key" value="<?php echo esc_attr(
+                        <input type="password" id="pmc_<?php echo $slug; ?>_key" name="pmc_<?php echo $slug; ?>_key" value="<?php echo esc_attr(
     get_option("pmc_" . $slug . "_key")
-); ?>" class="regular-text">
+); ?>" class="regular-text pmc-api-input">
+                        <button type="button" 
+                            class="button pmc-toggle-pw" 
+                            style="display: inline-flex; align-items: center; justify-content: center; height: 30px; width: 30px; padding: 0;" 
+                            title="Show/Hide Key">
+                        <span class="dashicons dashicons-visibility" style="margin: 0; line-height: 1;"></span>
+                    </button>
                         <button type="button" class="button pmc-test-btn" data-provider="<?php echo $slug; ?>">Test API</button>
                         <p class="description">
                             <a href="<?php echo $provider_links[
@@ -287,6 +293,21 @@ function pmc_settings_page_html()
     </div>
     <script>
     jQuery(document).ready(function($) {
+        // Toggle Password Visibility
+        $('.pmc-toggle-pw').on('click', function() {
+            const btn = $(this);
+            const input = btn.siblings('.pmc-api-input');
+            const icon = btn.find('.dashicons');
+    
+            if (input.attr('type') === 'password') {
+                input.attr('type', 'text');
+                icon.removeClass('dashicons-visibility').addClass('dashicons-hidden');
+            } else {
+                input.attr('type', 'password');
+                icon.removeClass('dashicons-hidden').addClass('dashicons-visibility');
+            }
+        });
+        
         $('.pmc-test-btn').on('click', function() {
             const btn = $(this), prov = btn.data('provider'), key = $('#pmc_' + prov + '_key').val();
             btn.text('Testing...').prop('disabled', true);
