@@ -16,6 +16,9 @@ jobs:
   build_release:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -26,9 +29,6 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm' 
-
-      - name: Checkout Code
-        uses: actions/checkout@v6
 
       - name: Get Plugin Version
         id: get_version
