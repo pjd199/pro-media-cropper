@@ -22,37 +22,32 @@ add_action("admin_enqueue_scripts", function ($hook) {
     }
     wp_enqueue_media();
 
-    $base_url  = plugin_dir_url(PMC_MAIN_FILE) . 'admin/';
-    $base_path = plugin_dir_path(PMC_MAIN_FILE) . 'admin/';
+    $dir_url  = plugin_dir_url(PMC_MAIN_FILE);
+    $dir_path = plugin_dir_path(PMC_MAIN_FILE);
 
-    $get_ver = function($rel_path) use ($base_path) {
-        return file_exists($base_path . $rel_path) ? filemtime($base_path . $rel_path) : '1.0.0';
-    };
+    // Enqueue the JS Bundle
+    $js_bundle = 'admin/dist/pmc-admin.bundle.js';
+    if (file_exists($dir_path . $js_bundle)) {
+        wp_enqueue_script(
+            'pmc-admin-js',
+            $dir_url . $js_bundle,
+            ['jquery'],
+            filemtime($dir_path . $js_bundle),
+            true
+        );
+    }
 
-    // Vendor scripts
-    wp_enqueue_style("cropper-css", $base_url . 'css/vendor/cropper.min.css', [], $get_ver('css/vendor/cropper.min.css'));
-    wp_enqueue_script("cropper-js", $base_url . 'js/vendor/cropper.min.js', ["jquery"], $get_ver('js/vendor/cropper.min.js'), true);
-    wp_enqueue_script("pdf-js",     $base_url . 'js/vendor/pdf.min.mjs', [], $get_ver('js/vendor/pdf.min.mjs'), true);
-
-    // Admin scripts
-    wp_enqueue_style("pmc-admin-css", $base_url . 'css/cropper.css', [], $get_ver('css/cropper.css'));
-    wp_enqueue_script(
-        'pmc-admin-js', 
-        $base_url . 'js/pmc-admin.mjs', 
-        ['jquery', 'cropper-js'], 
-        $get_ver('js/pmc-admin.mjs'), 
-        true
-    );
-
-    // 4. Module Filter
-    add_filter('script_loader_tag', function($tag, $handle) {
-        if (in_array($handle, ['pmc-admin-js', 'pdf-js'])) {
-            return str_replace('<script ', '<script type="module" ', $tag);
-        }
-        return $tag;
-    }, 10, 2);
-
-    wp_localize_script("cropper-js", "pmc_vars", [
+    // Enqueue the CSS Bundle (includes your CSS + Cropper CSS)
+    $css_bundle = 'admin/dist/pro-media-cropper.css';
+    if (file_exists($dir_path . $css_bundle)) {
+        wp_enqueue_style(
+            'pmc-admin-css',
+            $dir_url . $css_bundle,
+            [],
+            filemtime($dir_path . $css_bundle)
+        );
+    }
+    wp_localize_script("pmc-admin-js", "pmc_vars", [
         "nonce" => wp_create_nonce("wp_rest"),
         "ajaxurl" => admin_url("admin-ajax.php"),
         "root" => esc_url_raw(rest_url()),

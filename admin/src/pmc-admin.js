@@ -1,8 +1,16 @@
 /**
  * Pro Media Cropper - Main Admin Module
  */
+import Cropper from 'cropperjs';
+import 'cropperjs/dist/cropper.css';
+import * as pdfjsLib from 'pdfjs-dist';
 
-import * as pdfjsLib from './vendor/pdf.min.mjs';
+import './pmc-admin.css'; // Your custom styles
+
+// Vite-specific way to get the worker URL from node_modules
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 // Elements
 const canvas = document.getElementById('pmc-canvas');

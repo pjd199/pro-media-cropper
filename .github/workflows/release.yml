@@ -21,6 +21,12 @@ jobs:
         with:
           php-version: '8.4'
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm' 
+
       - name: Checkout Code
         uses: actions/checkout@v6
 
@@ -33,7 +39,12 @@ jobs:
 
       - name: Build plugin
         run: |
+          # PHP
           composer install --no-dev --optimize-autoloader
+          
+          # Javascript and CSS
+          npm install
+          npm run build
 
       - name: Prepare Plugin for Zipping
         run: |
@@ -41,10 +52,10 @@ jobs:
           
           # Copy your specific architecture folders
           cp -r admin ${{ env.PLUGIN_SLUG }}/
+          rm -rf ${{ env.PLUGIN_SLUG }}/admin/src
           cp -r vendor ${{ env.PLUGIN_SLUG }}/
           cp ${{ env.PLUGIN_SLUG }}.php ${{ env.PLUGIN_SLUG }}/
           cp uninstall.php ${{ env.PLUGIN_SLUG }}/
-          
           cp README.md ${{ env.PLUGIN_SLUG }}/
           cp LICENSE ${{ env.PLUGIN_SLUG }}/
 
