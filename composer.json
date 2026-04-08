@@ -1,0 +1,14 @@
+{
+    "name": "pjd199/pro-media-cropper",
+    "description": "Pro Media Cropper",
+    "license": "MIT",
+     "authors": [
+        {
+            "name": "Pete Dibdin",
+            "homepage": "https://github.com/pjd199/pro-media-cropper"        
+        }
+    ],
+    "require": {
+        "yahnis-elsts/plugin-update-checker": "^5.6"
+    }
+}
