@@ -84,7 +84,7 @@ jobs:
       
       - name: Create Release
         if: steps.check_release.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2.6
         with:
           tag_name: v${{ env.VERSION }}
           name: Release v${{ env.VERSION }}
