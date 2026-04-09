@@ -22,13 +22,13 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: "8.4"
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
-          cache: 'npm' 
+          node-version: "24"
+          cache: "npm"
 
       - name: Get Plugin Version
         id: get_version
@@ -41,7 +41,7 @@ jobs:
         run: |
           # PHP
           composer install --no-dev --optimize-autoloader
-          
+
           # Javascript and CSS
           npm install
           npm run build
@@ -49,7 +49,7 @@ jobs:
       - name: Prepare Plugin for Zipping
         run: |
           mkdir -p ${{ env.PLUGIN_SLUG }}
-          
+
           # Copy your specific architecture folders
           cp -r admin ${{ env.PLUGIN_SLUG }}/
           rm -rf ${{ env.PLUGIN_SLUG }}/admin/src
@@ -69,7 +69,7 @@ jobs:
           name: ${{ env.PLUGIN_SLUG }}-v${{ env.VERSION }}
           path: ${{ env.PLUGIN_SLUG }}-${{ env.VERSION }}.zip
           retention-days: 7
-      
+
       - name: Check if release exists
         id: check_release
         run: |
@@ -81,7 +81,7 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Create Release
         if: steps.check_release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2.6.1

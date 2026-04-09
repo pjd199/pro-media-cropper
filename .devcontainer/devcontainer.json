@@ -7,5 +7,12 @@
     "80": { 
         "label": "WordPress", 
         "onAutoForward": "openBrowserOnce" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client"
+      ]
+    }
   }
 }

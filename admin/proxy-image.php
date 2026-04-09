@@ -7,7 +7,7 @@ if (!defined("ABSPATH")) {
 }
 
 // Register the proxy action for logged-in users
-add_action('wp_ajax_pmc_proxy_image', function() {
+add_action('wp_ajax_pmc_proxy_image', function () {
     // 1. Security Check: Only allow authorized users (e.g., editors/admins)
     if (!current_user_can('edit_posts')) {
         wp_die('Unauthorized');
