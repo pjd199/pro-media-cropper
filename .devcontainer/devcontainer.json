@@ -1,5 +1,5 @@
 {
-  "name": "WordPress Development Codespace",
+  "name": "Pro Media Cropper",
   "postCreateCommand": "sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/0.0.5/wpc.sh && sudo chmod +x /usr/local/bin/wpc",
   "postStartCommand": "wpc start",
   "forwardPorts": [80],
