@@ -25,6 +25,7 @@ add_action("admin_init", function () {
     register_setting("pmc_group", "pmc_export_width");
     register_setting("pmc_group", "pmc_export_height");
     register_setting("pmc_group", "pmc_default_ratio");
+    register_setting("pmc_group", "pmc_save_exact_dimensions");
 
     if (
         isset($_POST["pmc_clear_cache"]) &&
@@ -121,10 +122,6 @@ function pmc_settings_page_html()
                     <th>Default Aspect Ratio</th>
                     <td>
                         <select name="pmc_default_ratio">
-                            <option value="custom" <?php selected(
-                                                        $def_ratio,
-                                                        "custom"
-                                                    ); ?>>Custom Settings (Dimensions below)</option>
                             <option value="16:9" <?php selected(
                                                         $def_ratio,
                                                         "16:9"
@@ -161,6 +158,10 @@ function pmc_settings_page_html()
                                                         $def_ratio,
                                                         "Photo"
                                                     ); ?>>Standard Photo (4x6) (3:2)</option>
+                            <option value="custom" <?php selected(
+                                                        $def_ratio,
+                                                        "custom"
+                                                    ); ?>>Custom Settings (Dimensions below)</option>
                         </select>
                     </td>
                 </tr>
@@ -173,6 +174,16 @@ function pmc_settings_page_html()
                         <input type="number" name="pmc_export_height" value="<?php echo esc_attr(
                                                                                     get_option("pmc_export_height", "1080")
                                                                                 ); ?>" class="small-text">
+                    </td>
+                </tr>
+                <tr>
+                    <th>Save Exact Dimensions</th>
+                    <td>
+                        <input type="checkbox" name="pmc_save_exact_dimensions" value="1" <?php checked(1, get_option("pmc_save_exact_dimensions", 0)); ?>>
+                        <p class="description">
+                            <strong>True:</strong> Always output at full preset size (upscale if needed).<br>
+                            <strong>False (Default):</strong> If the selection is smaller than the preset, save at the smaller size (prevents blurring/upscaling).
+                        </p>
                     </td>
                 </tr>
                 <?php foreach (

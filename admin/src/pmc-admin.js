@@ -133,39 +133,91 @@ function initCropper() {
 function update() {
     if (!cropper || !cropper.ready) return;
     const data = cropper.getData();
-    if (Math.floor(data.width) <= 0 || Math.floor(data.height) <= 0) {
-        ctx.clearRect(0, 0, exportW, exportH);
-        return;
-    }
+    if (Math.floor(data.width) <= 0 || Math.floor(data.height) <= 0) return;
 
     const crop = cropper.getCroppedCanvas({
         imageSmoothingEnabled: true,
         imageSmoothingQuality: 'high'
     });
-
     if (!crop) return;
-    ctx.clearRect(0, 0, exportW, exportH);
 
-    if (!isLocked) {
+    if (isLocked) {
+        // --- LOCKED RATIO MODE ---
+        let finalW, finalH;
+
+        if (pmc_vars.save_exact) {
+            finalW = exportW;
+            finalH = exportH;
+        } else {
+            let ratio = Math.min(exportW / crop.width, exportH / crop.height);
+            if (ratio > 1) ratio = 1;
+            finalW = Math.round(crop.width * ratio);
+            finalH = Math.round(crop.height * ratio);
+        }
+
+        if (canvas.width !== finalW || canvas.height !== finalH) {
+            canvas.width = finalW;
+            canvas.height = finalH;
+            document.getElementById('pmc-preview-label').textContent =
+                `Export Preview (${canvas.width}x${canvas.height})`;
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(crop, 0, 0, finalW, finalH);
+
+    } else {
+        // --- PILLARBOX MODE ---
+        let canvasW, canvasH;
+
+        if (pmc_vars.save_exact) {
+            canvasW = exportW;
+            canvasH = exportH;
+        } else {
+            const scaleToFitCrop = Math.max(
+                crop.width / exportW,
+                crop.height / exportH
+            );
+            const canvasScale = Math.min(scaleToFitCrop, 1);
+            canvasW = Math.round(exportW * canvasScale);
+            canvasH = Math.round(exportH * canvasScale);
+        }
+
+        if (canvas.width !== canvasW || canvas.height !== canvasH) {
+            canvas.width = canvasW;
+            canvas.height = canvasH;
+            document.getElementById('pmc-preview-label').textContent =
+                `Export Preview (${canvasW}x${canvasH})`;
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw background
         const mode = document.getElementById('pmc-mode').value;
         if (mode === 'echo') {
             ctx.save();
             ctx.filter = `blur(${document.getElementById('pmc-blur').value}px) brightness(0.6)`;
-            ctx.drawImage(crop, -20, -20, exportW + 40, exportH + 40);
+            ctx.drawImage(crop, -20, -20, canvasW + 40, canvasH + 40);
             ctx.restore();
         } else {
-            ctx.fillStyle = (mode === 'white') ? "#FFF" : (mode === 'custom' ? document.getElementById('pmc-color').value : "#000");
-            ctx.fillRect(0, 0, exportW, exportH);
+            ctx.fillStyle = (mode === 'white') ? "#FFF"
+                : (mode === 'custom') ? document.getElementById('pmc-color').value
+                : "#000";
+            ctx.fillRect(0, 0, canvasW, canvasH);
         }
-    } else {
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0, 0, exportW, exportH);
-    }
 
-    const r = Math.min(exportW / crop.width, exportH / crop.height);
-    const nw = crop.width * r;
-    const nh = crop.height * r;
-    ctx.drawImage(crop, (exportW - nw) / 2, (exportH - nh) / 2, nw, nh);
+        // Draw the crop image — scaled to fit inside the canvas, never upscaled
+        const imgScale = pmc_vars.save_exact
+            ? Math.min(canvasW / crop.width, canvasH / crop.height)
+            : Math.min(canvasW / crop.width, canvasH / crop.height, 1);
+            
+        const drawW = Math.round(crop.width  * imgScale);
+        const drawH = Math.round(crop.height * imgScale);
+        const drawX = Math.round((canvasW - drawW) / 2);
+        const drawY = Math.round((canvasH - drawH) / 2);
+        ctx.drawImage(crop, drawX, drawY, drawW, drawH);
+    }
 }
 
 // Event Listeners

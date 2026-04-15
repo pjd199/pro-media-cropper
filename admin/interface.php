@@ -53,6 +53,7 @@ add_action("admin_enqueue_scripts", function ($hook) {
         "root" => esc_url_raw(rest_url()),
         "pdf_worker_url" => plugin_dir_url(PMC_MAIN_FILE) . 'admin/js/vendor/pdf.worker.min.mjs',
         "default_ratio" => get_option("pmc_default_ratio", "16:9"),
+        "save_exact" => (bool) get_option("pmc_save_exact_dimensions", false),
     ]);
 });
 
@@ -87,15 +88,6 @@ function pmc_render_page()
                     <div class="pmc-preview-box"><canvas id="pmc-canvas"></canvas></div>
                     <div class="pmc-row"><label>Aspect Ratio Preset</label>
                         <select id="pmc-ratio-preset" style="width:100%;">
-                            <option value="custom" data-w="<?php echo get_option(
-                                                                "pmc_export_width",
-                                                                "1920"
-                                                            ); ?>" data-h="<?php echo get_option(
-                                                "pmc_export_height",
-                                                "1080"
-                                            ); ?>">Custom Settings (<?php echo get_option("pmc_export_width", "1920") .
-                                                            "x" .
-                                                            get_option("pmc_export_height", "1080"); ?>)</option>
                             <option value="16:9" data-w="1920" data-h="1080">Widescreen (16:9)</option>
                             <option value="1:1" data-w="1080" data-h="1080">Square (1:1)</option>
                             <option value="4:5" data-w="1080" data-h="1350">Instagram/Facebook Portrait (4:5)</option>
@@ -105,6 +97,15 @@ function pmc_render_page()
                             <option value="Pinterest" data-w="1000" data-h="1500">Pinterest (2:3)</option>
                             <option value="YouTube" data-w="1920" data-h="1080">YouTube Thumbnail (16:9)</option>
                             <option value="Photo" data-w="1800" data-h="1200">Standard Photo (4x6) (3:2)</option>
+                            <option value="custom" data-w="<?php echo get_option(
+                                                                "pmc_export_width",
+                                                                "1920"
+                                                            ); ?>" data-h="<?php echo get_option(
+                                                "pmc_export_height",
+                                                "1080"
+                                            ); ?>">Custom Settings (<?php echo get_option("pmc_export_width", "1920") .
+                                                            "x" .
+                                                            get_option("pmc_export_height", "1080"); ?>)</option>
                         </select>
                     </div>
                     <div class="pmc-row"><label>Crop Mode</label>
