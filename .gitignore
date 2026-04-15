@@ -1,3 +1,4 @@
 .wpc
 vendor
 node_modules
+admin/dist/*
