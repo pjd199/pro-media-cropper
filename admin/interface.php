@@ -51,7 +51,6 @@ add_action("admin_enqueue_scripts", function ($hook) {
         "nonce" => wp_create_nonce("wp_rest"),
         "ajaxurl" => admin_url("admin-ajax.php"),
         "root" => esc_url_raw(rest_url()),
-        "pdf_worker_url" => plugin_dir_url(PMC_MAIN_FILE) . 'admin/js/vendor/pdf.worker.min.mjs',
         "default_ratio" => get_option("pmc_default_ratio", "16:9"),
         "save_exact" => (bool) get_option("pmc_save_exact_dimensions", false),
     ]);

@@ -45,8 +45,6 @@ function updateCanvasSize() {
 }
 
 async function renderPdf(file) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pmc_vars.pdf_worker_url;
-
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const page = await pdf.getPage(1);
