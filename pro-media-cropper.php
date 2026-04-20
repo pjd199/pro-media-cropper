@@ -38,4 +38,4 @@ $updateChecker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChec
     'pro-media-cropper'
 );
 $updateChecker->setBranch('main');
-$updateChecker->getVcsApi()->enableReleaseAssets('/pro-media-cropper-\d+\.\d+\.\d+.\.zip($|[?&#])/i');
+$updateChecker->getVcsApi()->enableReleaseAssets('/pro-media-cropper-\d+\.\d+\.\d+\.zip($|[?&#])/i');
