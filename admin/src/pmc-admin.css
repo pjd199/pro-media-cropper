@@ -188,11 +188,6 @@
     font-style: italic;
 }
 
-/* Ensure buttons look like native WP header buttons */
-.page-title-action {
-    cursor: pointer;
-}
-
 .pmc-spinner {
     border: 3px solid #f3f3f3;
     border-top: 3px solid #3498db;
@@ -307,4 +302,161 @@
 .wrap~.litespeed_icon.notice-success,
 .litespeed_icon.notice-success {
     display: none !important;
+}
+
+/* ── Trigger button ── */
+.pmc-media-trigger {
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 12px;
+    background: #fff;
+    color: #0073aa;
+    border: 1px solid #0073aa;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    margin-left: 4px;
+}
+.pmc-media-trigger:hover {
+    background: #0073aa;
+    color: #fff;
+}
+
+/* ── Modal overlay ── */
+#pmc-modal-container {
+    position: fixed;
+    inset: 0;
+    z-index: 160000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#pmc-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+}
+#pmc-modal-dialog {
+    position: relative;
+    background: #fff;
+    width: 90vw;
+    max-width: 1200px;
+    height: 85vh;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ── Modal header ── */
+#pmc-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #ddd;
+    flex-shrink: 0;
+}
+#pmc-modal-header h2 {
+    margin: 0;
+    font-size: 16px;
+}
+.pmc-modal-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 12px;
+    background: #0073aa;
+    color: #fff;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+}
+.pmc-modal-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+.pmc-modal-btn-primary:not(:disabled):hover {
+    background: #005177;
+}
+.pmc-modal-btn {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 12px;
+    background: #f6f7f7;
+    color: #1e1e1e;
+    border: 1px solid #ddd;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+}
+.pmc-modal-btn:hover {
+    background: #ddd;
+}
+
+/* ── Modal body — no scroll, flex layout ── */
+#pmc-modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+#pmc-modal-body .pmc-source-bar {
+    flex-shrink: 0;
+    margin-bottom: 8px;
+}
+#pmc-modal-body .pmc-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    overflow: hidden;
+    align-items: stretch;
+}
+#pmc-modal-body .pmc-main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+#pmc-modal-body .pmc-editor-wrapper {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#pmc-modal-body .pmc-editor-wrapper img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+}
+#pmc-modal-body .pmc-sidebar {
+    overflow-y: auto;
+    max-height: 100%;
+    min-height: 0;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    display: block; /* override flex column from base rule */
+}
+
+/* ── Stock search sits above the PMC modal ── */
+#pmc-modal-body #pmc-search-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 160001;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }

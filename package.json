@@ -4,8 +4,8 @@
   "description": "**Pro Media Cropper** is a high-precision image editing and cropping tool built natively for WordPress. It is designed for social media managers, photographers, and content creators who need to generate perfectly sized assets for YouTube, Instagram, X (Twitter), and Pinterest while maintaining automatic metadata and attribution tracking.",
   "main": "index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build"
+      "dev": "vite",
+    "build": "vite build && vite build --config vite.config.media-tab.js"
   },
   "repository": {
     "type": "git",
