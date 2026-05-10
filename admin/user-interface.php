@@ -33,6 +33,40 @@ function pmc_render_ui_html(): void { ?>
                 <div id="pmc-loading">Processing…</div>
                 <img id="pmc-image">
             </div>
+            <!-- AI overlay — hidden until AI mode is entered -->
+            <div id="pmc-ai-overlay" class="pmc-ai-overlay" style="display:none;">
+                <div class="pmc-ai-toolbar">
+                    <textarea id="pmc-ai-prompt" rows="2"></textarea>
+                    <button id="pmc-ai-generate" class="pmc-modal-btn-primary">Generate</button>
+                    <button id="pmc-ai-accept"   class="pmc-modal-btn-primary" disabled>✓ Accept</button>
+                    <button id="pmc-ai-cancel"   class="pmc-modal-btn">✕ Cancel</button>
+                </div>
+                <div class="pmc-ai-split">
+                    <div class="pmc-ai-panel" id="pmc-ai-left">
+                        <div class="pmc-ai-panel-label">Source</div>
+                        <div class="pmc-ai-img-wrap" id="pmc-ai-left-wrap">
+                            <img id="pmc-ai-source-img" draggable="false">
+                        </div>
+                    </div>
+                    <div class="pmc-ai-panel" id="pmc-ai-right">
+                        <div class="pmc-ai-panel-label">
+                            AI Result <span id="pmc-ai-dims"></span>
+                        </div>
+                        <div class="pmc-ai-img-wrap" id="pmc-ai-right-wrap">
+                            <div id="pmc-ai-placeholder">
+                                Press Generate to create an AI-resized version
+                            </div>
+                            <img id="pmc-ai-result-img" style="display:none;" draggable="false">
+                            <div id="pmc-ai-spinner" style="display:none;">
+                                <div class="pmc-ai-spinner-ring"></div>
+                                <div class="pmc-ai-spinner-msg">
+                                    This may take a minute
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="pmc-sidebar">
             <label id="pmc-preview-label">Export Preview</label>
@@ -58,9 +92,12 @@ function pmc_render_ui_html(): void { ?>
 
             <div class="pmc-row">
                 <label>Crop Mode</label>
-                <div class="pmc-mode-toggle">
-                    <button id="mode-locked" class="pmc-mode-btn active">Locked Ratio</button>
-                    <button id="mode-pillar" class="pmc-mode-btn">Pillarbox</button>
+                <div class="pmc-mode-wrapper">
+                    <div class="pmc-mode-toggle">
+                        <button id="mode-locked" class="pmc-mode-btn active">Locked Ratio</button>
+                        <button id="mode-pillar" class="pmc-mode-btn">Pillarbox</button>
+                    </div>
+                    <button id="pmc-ai-btn" class="components-button is-secondary" disabled>✨AI</button>
                 </div>
             </div>
 

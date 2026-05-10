@@ -26,6 +26,7 @@ add_action("admin_init", function () {
     register_setting("pmc_group", "pmc_export_height");
     register_setting("pmc_group", "pmc_default_ratio");
     register_setting("pmc_group", "pmc_save_exact_dimensions");
+    register_setting("pmc_group", "pmc_openai_api_key");
 
     if (
         isset($_POST["pmc_clear_cache"]) &&
@@ -231,6 +232,21 @@ function pmc_settings_page_html()
                                                         "pexels"
                                                     ); ?>>Pexels</option>
                         </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Open AI API Key</th>
+                    <td>
+                        <input type="password" id="pmc_openai_api_key" name="pmc_openai_api_key" value="<?php echo esc_attr(get_option('pmc_openai_api_key')) ?>" class="regular-text pmc-api-input">
+                            <button type="button"
+                                class="button pmc-toggle-pw"
+                                style="display: inline-flex; align-items: center; justify-content: center; height: 30px; width: 30px; padding: 0;"
+                                title="Show/Hide Key">
+                                <span class="dashicons dashicons-visibility" style="margin: 0; line-height: 1;"></span>
+                            </button>
+                        <p class="description">API Key for OpenAI image resize.
+                            <a href="https://developers.openai.com/api/docs" target="_blank" style="text-decoration:none;">Get help with OpenAI API.</a>
+                        </p>
                     </td>
                 </tr>
             </table>

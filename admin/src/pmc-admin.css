@@ -93,6 +93,13 @@
     border-radius: 4px;
     padding: 4px;
     border: 1px solid #ccd0d4;
+    flex: 1;
+}
+
+.pmc-mode-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .pmc-mode-btn {
@@ -186,26 +193,6 @@
     font-size: 13px;
     color: #64748b;
     font-style: italic;
-}
-
-.pmc-spinner {
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #3498db;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    animation: spin 1s linear infinite;
-    margin: 10px auto;
-}
-
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
 }
 
 .pmc-eyedropper-active {
@@ -459,4 +446,158 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* ── AI mode overlay ── */
+.pmc-ai-overlay {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+}
+
+.pmc-ai-toolbar {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    flex-shrink: 0;
+    background: #f6f7f7;
+}
+
+#pmc-ai-prompt {
+    flex: 1;
+    resize: vertical;
+    font-size: 14px;
+    padding: 6px 8px;
+    border: 1px solid #ccd0d4;
+    border-radius: 3px;
+    font-family: inherit;
+    min-height: 48px;
+}
+
+.pmc-ai-split {
+    flex: 1;
+    display: flex;
+    gap: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.pmc-ai-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-right: 1px solid #ddd;
+}
+
+.pmc-ai-panel:last-child {
+    border-right: none;
+}
+
+.pmc-ai-panel-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #64748b;
+    padding: 6px 10px;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+}
+
+.pmc-ai-img-wrap {
+    flex: 1;
+    overflow: hidden;
+    background: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: zoom-in;
+    flex-direction: column;
+}
+
+.pmc-ai-img-wrap img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.1s ease;
+    user-select: none;
+}
+
+#pmc-ai-placeholder {
+    color: #a0aab4;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+}
+
+/* The container to keep everything centered and spaced */
+#pmc-ai-spinner {
+    text-align: center;
+    margin: 20px 0;
+    padding: 10px;
+}
+
+/* The actual pulsing circle */
+.pmc-ai-spinner-ring {
+    width: 32px;
+    height: 32px;
+    background-color: #2271b1; /* WP Blue */
+    border-radius: 50%;
+    margin: 0 auto 15px auto; /* Bottom margin to separate from text */
+    
+    /* Animation: name | duration | timing | iteration */
+    animation: pmc-pulse-glow 1.8s ease-in-out infinite;
+    
+    /* Prevents the browser from shifting pixels (sub-pixel rendering) */
+    backface-visibility: hidden;
+}
+
+/* The text underneath */
+.pmc-ai-spinner-msg {
+    font-size: 14px;
+    color: #646970; /* Standard WP muted text color */
+    font-style: italic;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+@keyframes pmc-pulse-glow {
+    0% {
+        transform: scale(0.7);
+        opacity: 0.4;
+        box-shadow: 0 0 0 0 rgba(34, 113, 177, 0);
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+        /* Adds a breathing aura effect */
+        box-shadow: 0 0 20px 5px rgba(34, 113, 177, 0.3);
+    }
+    100% {
+        transform: scale(0.7);
+        opacity: 0.4;
+        box-shadow: 0 0 0 0 rgba(34, 113, 177, 0);
+    }
+}
+
+/* ── AI button in source bar ── */
+#pmc-ai-btn {
+    background: #f0f6fc;
+    color: #2271b1;
+    border-color: #2271b1;
+}
+
+#pmc-ai-btn:hover:not(:disabled) {
+    background: #2271b1;
+    color: #fff;
+}
+
+#pmc-ai-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }

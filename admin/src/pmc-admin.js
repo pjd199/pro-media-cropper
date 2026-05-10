@@ -20,14 +20,15 @@ function pmcInit(rootEl = document) {
     }
 
     // Elements
-    const canvas       = q('pmc-canvas');
-    const ctx          = canvas.getContext('2d');
-    const img          = q('pmc-image');
-    const loader       = q('pmc-loading');
+    const canvas        = q('pmc-canvas');
+    const ctx           = canvas.getContext('2d');
+    const img           = q('pmc-image');
+    const loader        = q('pmc-loading');
     const filenameInput = q('pmc-filename');
-    const statusCont   = q('pmc-status-container');
-    const attrLine     = q('pmc-attribution');
-    const presetSel    = q('pmc-ratio-preset');
+    const aiPromptInput = q('pmc-ai-prompt');
+    const statusCont    = q('pmc-status-container');
+    const attrLine      = q('pmc-attribution');
+    const presetSel     = q('pmc-ratio-preset');
 
     // State
     let cropper = null;
@@ -75,6 +76,8 @@ function pmcInit(rootEl = document) {
         ctx.clearRect(0, 0, exportW, exportH);
         q('pmc-save-btn').disabled = true;
         statusCont.innerHTML = '';
+        aiBtn.disabled = true;
+        if (aiMode) exitAiMode();
     }
 
     function loadSource(url, name, meta = {}) {
@@ -113,21 +116,50 @@ function pmcInit(rootEl = document) {
             img.classList.add('loaded');
             q('pmc-save-btn').disabled = false;
             loader.style.display = 'none';
+            aiBtn.disabled = false;
         };
         img.onerror = () => {
             alert('Failed to load image. The source may be blocking external requests.');
             loader.style.display = 'none';
         };
     }
-
+    
     function initCropper() {
         if (cropper) cropper.destroy();
+
         cropper = new Cropper(img, {
             aspectRatio: isLocked ? exportW / exportH : NaN,
             viewMode: 1,
+
+            ready() {
+                const imageData  = cropper.getImageData();
+                const canvasData = cropper.getCanvasData();
+
+                const imageRatio  = imageData.naturalWidth / imageData.naturalHeight;
+                const targetRatio = exportW / exportH;
+
+                // Allow tiny floating-point differences
+                const tolerance = 0.01;
+
+                const ratiosMatch =
+                    Math.abs(imageRatio - targetRatio) < tolerance;
+
+                // If already correct aspect ratio,
+                // select the entire image automatically
+                if (ratiosMatch && isLocked) {
+                    cropper.setCropBoxData({
+                        left:   canvasData.left,
+                        top:    canvasData.top,
+                        width:  canvasData.width,
+                        height: canvasData.height,
+                    });
+                }
+
+                update();
+            },
+
             cropmove: update,
             crop: update,
-            ready: update,
         });
     }
 
@@ -202,6 +234,267 @@ function pmcInit(rootEl = document) {
                 drawW, drawH);
         }
     }
+
+    // ── AI Resize ─────────────────────────────────────────────────────────────
+
+    const aiBtn     = q('pmc-ai-btn');
+    const aiOverlay = q('pmc-ai-overlay');
+
+    // Zoom helper — mouse wheel + touch pinch on an image inside a wrapper
+    function setupZoom(wrap, image) {
+        let scale = 1, originX = 0, originY = 0;
+        let isPinching = false, lastDist = 0;
+
+        function applyTransform() {
+            image.style.transform       = `scale(${scale})`;
+            image.style.transformOrigin = `${originX}px ${originY}px`;
+        }
+
+        wrap.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = wrap.getBoundingClientRect();
+            originX = e.clientX - rect.left;
+            originY = e.clientY - rect.top;
+            scale   = Math.min(8, Math.max(1, scale * (e.deltaY < 0 ? 1.15 : 0.87)));
+            if (scale === 1) { originX = 0; originY = 0; }
+            applyTransform();
+        }, { passive: false });
+
+        wrap.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                isPinching = true;
+                lastDist   = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+        }, { passive: true });
+
+        wrap.addEventListener('touchmove', (e) => {
+            if (!isPinching || e.touches.length !== 2) return;
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            scale    = Math.min(8, Math.max(1, scale * (dist / lastDist)));
+            lastDist = dist;
+            const rect  = wrap.getBoundingClientRect();
+            originX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+            originY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
+            applyTransform();
+        }, { passive: true });
+
+        wrap.addEventListener('touchend', () => { isPinching = false; });
+
+        // Double-click/tap resets zoom
+        wrap.addEventListener('dblclick', () => {
+            scale = 1; originX = 0; originY = 0;
+            applyTransform();
+        });
+    }
+
+    // Wire up zoom once at init time — elements exist from the start
+    setupZoom(q('pmc-ai-left-wrap'),  rootEl.querySelector('#pmc-ai-source-img'));
+    setupZoom(q('pmc-ai-right-wrap'), rootEl.querySelector('#pmc-ai-result-img'));
+
+    q('pmc-ai-generate').onclick = runAiGenerate;
+    q('pmc-ai-accept').onclick   = acceptAiResult;
+    q('pmc-ai-cancel').onclick   = exitAiMode;
+    aiBtn.onclick                = enterAiMode;
+
+    let aiMode      = false;
+    let aiSourceBlob = null;
+    let aiResultB64  = null;
+
+    function enterAiMode() {
+        if (aiMode) return;
+        aiMode = true;
+
+        // Snapshot source image: max 2000px on longest side, WebP, max 2MB
+        const MAX_DIM  = 2000;
+        const MAX_SIZE = 2 * 1024 * 1024;
+        const scale    = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
+        const snap     = document.createElement('canvas');
+        snap.width     = Math.round(img.naturalWidth  * scale);
+        snap.height    = Math.round(img.naturalHeight * scale);
+        snap.getContext('2d').drawImage(img, 0, 0, snap.width, snap.height);
+
+        (async () => {
+            // Try decreasing quality until under 2MB
+            for (const quality of [0.85, 0.70, 0.55, 0.40]) {
+                const blob = await new Promise(res => snap.toBlob(res, 'image/avif', quality));
+                if (blob && (blob.size <= MAX_SIZE || quality === 0.40)) {
+                    aiSourceBlob = blob;
+                    break;
+                }
+            }
+        })();
+
+        // Populate source panel and prompt
+        rootEl.querySelector('#pmc-ai-source-img').src = img.src;
+        q('pmc-ai-prompt').value = aiDefaultPrompt();
+
+        // Reset result panel
+        rootEl.querySelector('#pmc-ai-result-img').style.display = 'none';
+        rootEl.querySelector('#pmc-ai-result-img').src = '';
+        q('pmc-ai-placeholder').style.display = 'flex';
+        q('pmc-ai-placeholder').textContent   = 'Press Generate to create an AI-resized version';
+        q('pmc-ai-spinner').style.display     = 'none';
+        q('pmc-ai-dims').textContent          = '';
+        q('pmc-ai-accept').disabled           = true;
+
+        if (cropper) cropper.disable();
+        aiOverlay.style.display = 'flex';
+        aiBtn.disabled    = true;
+    }
+
+    function exitAiMode() {
+        if (!aiMode) return;
+        aiMode       = false;
+        aiResultB64  = null;
+        aiSourceBlob = null;
+
+        aiOverlay.style.display = 'none';
+        if (cropper) cropper.enable();
+        aiBtn.disabled    = false;
+    }
+
+    function aiDefaultPrompt() {
+        const opt = presetSel.selectedOptions[0];
+        const width   = opt.dataset.w || exportW;
+        const height   = opt.dataset.h || exportH;
+        const prompt = [
+            `Resize and recompose this image to exactly ${width}×${height} pixels.`,
+            "Preserve the original visual style, colours, typography, and composition.",
+            "Keep important text clearly legible, especially titles, dates, and times.",
+            "Minor secondary text may be removed if necessary for layout.",
+            "Ensure all text on the output image is clearly visible",
+            "Do not add new design elements or borders.",
+            "Preserve any QR code exactly as provided."
+        ].join(' ');
+        return prompt;
+    }
+
+    function runAiGenerate() {
+        if (!aiSourceBlob) {
+            alert('Source image not ready — please wait a moment and try again.');
+            return;
+        }
+
+        const generateBtn = aiOverlay.querySelector('#pmc-ai-generate');
+        const acceptBtn   = aiOverlay.querySelector('#pmc-ai-accept');
+        const spinner     = aiOverlay.querySelector('#pmc-ai-spinner');
+        const placeholder = aiOverlay.querySelector('#pmc-ai-placeholder');
+        const resultImg   = aiOverlay.querySelector('#pmc-ai-result-img');
+        const dimsLabel   = aiOverlay.querySelector('#pmc-ai-dims');
+        const spinnerMsg  = aiOverlay.querySelector('#pmc-ai-spinner .pmc-ai-spinner-msg');
+
+        const opt = presetSel.selectedOptions[0];
+        const w   = parseInt(opt.dataset.w) || exportW;
+        const h   = parseInt(opt.dataset.h) || exportH;
+
+        generateBtn.disabled = true;
+        acceptBtn.disabled   = true;
+        resultImg.style.display   = 'none';
+        placeholder.style.display = 'none';
+        spinner.style.display     = 'block';
+
+        const progressSteps = [
+            { msg: 'Uploading image...',           delay: 0      },
+            { msg: 'Analysing your image...',      delay: 6000   },
+            { msg: 'Reading the layout...',        delay: 12000  },
+            { msg: 'Identifying text...',          delay: 18000  },
+            { msg: `Recomposing for ${w}×${h}...`, delay: 24000  },
+            { msg: 'Fitting the content...',       delay: 30000  },
+            { msg: 'Rendering text...',          delay: 36000  },
+            { msg: 'Preserving key details...',    delay: 42000  },
+            { msg: 'Refining the composition...',  delay: 49000  },
+            { msg: 'Finishing up...',              delay: 57000  },
+            { msg: 'Balancing the layout...',      delay: 67000  },
+            { msg: 'Checking the output...',       delay: 78000  },
+            { msg: 'Applying final touches...',    delay: 90000  },
+            { msg: 'Almost there...',              delay: 103000 },
+            { msg: 'Wrapping up...',               delay: 114000 },
+        ];
+        const progressTimers = [];
+
+        function startProgressTicker() {
+            progressSteps.forEach(({ msg, delay }) => {
+                const t = setTimeout(() => {
+                    if (spinnerMsg) spinnerMsg.textContent = msg;
+                }, delay);
+                progressTimers.push(t);
+            });
+        }
+
+        function clearProgressTicker() {
+            progressTimers.forEach(clearTimeout);
+            progressTimers.length = 0;
+        }
+
+        startProgressTicker();
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const fd = new FormData();
+            fd.append('image',    reader.result);
+            fd.append('prompt',   aiPromptInput.value || aiDefaultPrompt());
+
+            fetch(pmc_vars.root + 'pmc/v1/ai-resize', {
+                method:  'POST',
+                headers: { 'X-WP-Nonce': pmc_vars.nonce },
+                body:    fd,
+                signal:  AbortSignal.timeout(120000),
+            })
+            .then(r => {
+                if (!r.ok) return r.json().then(e => Promise.reject(e.error || 'Request failed'));
+                return r.json();
+            })
+            .then(res => {
+                clearProgressTicker();
+                spinner.style.display = 'none';
+                generateBtn.disabled  = false;
+
+                aiResultB64             = res.b64;
+                resultImg.src           = 'data:image/png;base64,' + aiResultB64;
+                resultImg.style.display = 'block';
+                dimsLabel.textContent   = `(${w}×${h})`;
+                acceptBtn.disabled      = false;
+            })
+            .catch(err => {
+                clearProgressTicker();
+                spinner.style.display     = 'none';
+                generateBtn.disabled      = false;
+                placeholder.textContent   = '⚠ ' + (typeof err === 'string' ? err : 'Request failed or timed out.');
+                placeholder.style.display = 'flex';
+                console.error('PMC AI error', err);
+            });
+        };
+        reader.readAsDataURL(aiSourceBlob);
+    }
+
+    function acceptAiResult() {
+        if (!aiResultB64) return;
+
+        // Load the AI result as the new source image, then exit AI mode
+        const dataUrl = 'data:image/png;base64,' + aiResultB64;
+        exitAiMode();
+
+        if (!isLocked) {
+            q('mode-locked').click();
+        }
+        
+        loadSource(dataUrl, (filenameInput.value || 'ai-result') + '-ai', { isBlob: true });
+    }
+
+    // Enable AI button once image is loaded
+    const _origImgOnload = img.onload;
+    img.onload = function (...args) {
+        if (_origImgOnload) _origImgOnload.apply(this, args);
+        aiBtn.disabled = false;
+    };
+
+    aiBtn.onclick = enterAiMode;
 
     // ── Event listeners ───────────────────────────────────────────────────────
 

@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Pro Media Cropper
  * Description: Precision cropping tool with advanced crop options and stock image search function.
- * Version: 3.10.3
+ * Version: 3.11.0
  * Author: Pete Dibdin
  * GitHub Plugin URI: https://github.com/pjd199/pro-media-cropper
  * License: MIT
@@ -22,14 +22,16 @@ if (file_exists(plugin_dir_path(PMC_MAIN_FILE) . 'vendor/autoload.php')) {
     require_once plugin_dir_path(PMC_MAIN_FILE) . 'vendor/autoload.php';
 }
 
-if (is_admin()) {
+require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/ai-resize.php';
+
+//if (is_admin()) {
     require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/settings.php';
     require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/search-stock.php';
     require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/proxy-image.php';
     require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/user-interface.php';
     require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/assets.php';
     require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/admin-page.php';
-}
+//}
 
 // Check for latest updates from GitHub
 $updateChecker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
