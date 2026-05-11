@@ -23,15 +23,15 @@ if (file_exists(plugin_dir_path(PMC_MAIN_FILE) . 'vendor/autoload.php')) {
 }
 
 require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/ai-resize.php';
+require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/proxy-image.php';
+require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/search-stock.php';
 
-//if (is_admin()) {
+if (is_admin()) {
     require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/settings.php';
-    require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/search-stock.php';
-    require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/proxy-image.php';
     require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/user-interface.php';
     require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/assets.php';
     require_once plugin_dir_path(PMC_MAIN_FILE) . 'admin/admin-page.php';
-//}
+}
 
 // Check for latest updates from GitHub
 $updateChecker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(

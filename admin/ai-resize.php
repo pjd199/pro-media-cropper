@@ -26,9 +26,6 @@ function pmc_ai_resize_handler(\WP_REST_Request $request) {
     $image_data = $request->get_param('image') ?? '';
     $prompt     = sanitize_text_field($request->get_param('prompt') ?? '');
 
-    error_log('Sending OpenAI Request');
-    error_log($prompt);
-
     if (empty($image_data)) {
         return new \WP_REST_Response(['error' => 'No image data received.'], 400);
     }
@@ -41,15 +38,13 @@ function pmc_ai_resize_handler(\WP_REST_Request $request) {
 
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mime  = finfo_buffer($finfo, $image_bin);
-    if (!in_array($mime, ['image/png', 'image/jpeg', 'image/webp', 'image/avif'])) {
-        error_log('Unsupported image format: ' . $mime);
+    if (!in_array($mime, ['image/png', 'image/jpeg', 'image/webp'])) {
         return new \WP_REST_Response(['error' => 'Unsupported image format.'], 400);
     }
 
     $ext = match($mime) {
         'image/jpeg' => '.jpg',
         'image/webp' => '.webp',
-        'image/avif' => '.avif',
         default      => '.png',
     };
     $tmp = tempnam(sys_get_temp_dir(), 'pmc-ai-') . $ext;
@@ -66,7 +61,6 @@ function pmc_ai_resize_handler(\WP_REST_Request $request) {
             ->withHttpClient($psr18Client)
             ->make();
 
-        error_log('Sending request');
         $response = $client->images()->edit([
             'model'  => 'gpt-image-2',
             'image'  => fopen($tmp, 'r'),
@@ -74,22 +68,16 @@ function pmc_ai_resize_handler(\WP_REST_Request $request) {
             'size'   => 'auto',
         ]);
 
-        error_log(print_r($response->meta(), true));
-
         $b64 = $response->data[0]->b64_json ?? null;
         if (!$b64) {
-            error_log('No image returned from OpenAI.');
             return new \WP_REST_Response(['error' => 'No image returned from OpenAI.'], 502);
         }
 
-        error_log('Success!');
         return new \WP_REST_Response(['b64' => $b64], 200);
 
     } catch (\Exception $e) {
-        error_log('OpenAI error: ' . $e->getMessage());
         return new \WP_REST_Response(['error' => 'OpenAI error: ' . $e->getMessage()], 502);
     } finally {
-        error_log('Cleaning temp file: ' . $tmp);
         if (file_exists($tmp)) unlink($tmp);
     }
 }
