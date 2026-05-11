@@ -181,8 +181,8 @@ function pmcInit(rootEl = document) {
             } else {
                 let ratio = Math.min(exportW / crop.width, exportH / crop.height);
                 if (ratio > 1) ratio = 1;
-                finalW = Math.round(crop.width  * ratio);
-                finalH = Math.round(crop.height * ratio);
+                finalW = Math.round(crop.width * ratio);
+                finalH = Math.round(finalW * (exportH / exportW));
             }
             if (canvas.width !== finalW || canvas.height !== finalH) {
                 canvas.width  = finalW;
@@ -219,13 +219,13 @@ function pmcInit(rootEl = document) {
                 ctx.restore();
             } else {
                 ctx.fillStyle = mode === 'white'  ? '#FFF'
-                              : mode === 'custom' ? q('pmc-color').value
-                              : '#000';
+                            : mode === 'custom' ? q('pmc-color').value
+                            : '#000';
                 ctx.fillRect(0, 0, canvasW, canvasH);
             }
 
             const imgScale = Math.min(canvasW / crop.width, canvasH / crop.height,
-                                      pmc_vars.save_exact ? Infinity : 1);
+                                    pmc_vars.save_exact ? Infinity : 1);
             const drawW = Math.round(crop.width  * imgScale);
             const drawH = Math.round(crop.height * imgScale);
             ctx.drawImage(crop,
@@ -234,7 +234,6 @@ function pmcInit(rootEl = document) {
                 drawW, drawH);
         }
     }
-
     // ── AI Resize ─────────────────────────────────────────────────────────────
 
     const aiBtn     = q('pmc-ai-btn');
