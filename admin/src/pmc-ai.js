@@ -228,7 +228,7 @@ export function runAiGenerate() {
 export function acceptAiResult() {
     if (!state.aiResultB64) return;
     const dataUrl  = 'data:image/png;base64,' + state.aiResultB64;
-    const filename = (els.filenameInput.value || 'ai-result') + '-ai';
+    const filename = (els.filenameInput.value || 'ai-result');
 
     exitAiMode();
 
