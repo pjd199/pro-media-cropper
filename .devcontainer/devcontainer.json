@@ -1,17 +1,15 @@
 {
   "name": "Pro Media Cropper",
-  "postCreateCommand": "sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/0.0.8/wpc.sh && sudo chmod 777 /usr/local/bin/wpc",
+  "postCreateCommand": {
+    "wpc": "sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/0.0.8/wpc.sh && sudo chmod 777 /usr/local/bin/wpc",
+    "composer": "composer install",
+    "npm": "npm install && npm run build"
+  },
   "forwardPorts": [80],
   "portsAttributes": {
     "80": { 
-        "label": "WordPress", 
-        "onAutoForward": "openBrowserOnce" }
-  },
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "bmewburn.vscode-intelephense-client"
-      ]
+      "label": "WordPress", 
+      "onAutoForward": "openBrowserOnce" 
     }
   }
 }
