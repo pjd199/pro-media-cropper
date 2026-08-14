@@ -89,9 +89,9 @@ export function update() {
             previewLabel.textContent = `Export Preview (${finalW}x${finalH})`;
         }
 
-        // Clear canvas without black background fill so no black border shows through
+        // Clear canvas and draw the image
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(crop, 0, 0, finalW, finalH);
+        ctx.drawImage(crop, -0.5, -0.5, finalW + 1, finalH + 1);
 
     } else {
         let canvasW, canvasH;
