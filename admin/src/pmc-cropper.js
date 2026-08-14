@@ -30,21 +30,20 @@ export function initCropper() {
         viewMode: 1,
 
         ready() {
-            const imageData  = state.cropper.getImageData();
-            const canvasData = state.cropper.getCanvasData();
+            const imageData   = state.cropper.getImageData();
 
             const imageRatio  = imageData.naturalWidth / imageData.naturalHeight;
             const targetRatio = state.exportW / state.exportH;
             const tolerance   = 0.01;
             const ratiosMatch = Math.abs(imageRatio - targetRatio) < tolerance;
 
-            // If already the correct aspect ratio, select the entire image
+            // Select full image using natural dimensions to avoid sub-pixel DOM drift
             if (ratiosMatch && state.isLocked) {
-                state.cropper.setCropBoxData({
-                    left:   canvasData.left,
-                    top:    canvasData.top,
-                    width:  canvasData.width,
-                    height: canvasData.height,
+                state.cropper.setData({
+                    x: 0,
+                    y: 0,
+                    width: imageData.naturalWidth,
+                    height: imageData.naturalHeight,
                 });
             }
 
@@ -81,7 +80,7 @@ export function update() {
             let ratio = Math.min(exportW / crop.width, exportH / crop.height);
             if (ratio > 1) ratio = 1;
             finalW = Math.round(crop.width * ratio);
-            finalH = Math.round(finalW * (exportH / exportW)); // derive to avoid rounding drift
+            finalH = Math.round(crop.height * ratio);
         }
 
         if (canvas.width !== finalW || canvas.height !== finalH) {
@@ -90,9 +89,8 @@ export function update() {
             previewLabel.textContent = `Export Preview (${finalW}x${finalH})`;
         }
 
+        // Clear canvas without black background fill so no black border shows through
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(crop, 0, 0, finalW, finalH);
 
     } else {
