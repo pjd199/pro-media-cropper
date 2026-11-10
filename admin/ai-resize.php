@@ -62,7 +62,7 @@ function pmc_ai_resize_handler(\WP_REST_Request $request) {
             ->make();
 
         $response = $client->images()->edit([
-            'model'  => 'gpt-image-2.5-sunburst',
+            'model'  => 'gpt-image-2.6-sunburst',
             'image'  => fopen($tmp, 'r'),
             'prompt' => $prompt,
             'size'   => 'auto',
